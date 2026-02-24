@@ -1,11 +1,10 @@
-import { type WizardData } from '../ConfigWizard'
+import { type WizardStepProps } from '@/types/wizard'
 
-interface StepProps {
-  data: WizardData
-  updateData: (updates: Partial<WizardData>) => void
-}
+export function ConnectStep({ config, onChange }: WizardStepProps) {
+  const updateConnect = (updates: Partial<typeof config.connect>) => {
+    onChange({ ...config, connect: { ...config.connect, ...updates } })
+  }
 
-export function ConnectStep({ data, updateData }: StepProps) {
   return (
     <div className="space-y-6">
       <div>
@@ -22,14 +21,14 @@ export function ConnectStep({ data, updateData }: StepProps) {
           </div>
           <button
             type="button"
-            onClick={() => updateData({ createConnectInstance: !data.createConnectInstance })}
+            onClick={() => updateConnect({ createConnectInstance: !config.connect.createConnectInstance })}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-              data.createConnectInstance ? 'bg-blue-600' : 'bg-gray-200'
+              config.connect.createConnectInstance ? 'bg-blue-600' : 'bg-gray-200'
             }`}
           >
             <span
               className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                data.createConnectInstance ? 'translate-x-5' : 'translate-x-0'
+                config.connect.createConnectInstance ? 'translate-x-5' : 'translate-x-0'
               }`}
             />
           </button>
@@ -37,7 +36,7 @@ export function ConnectStep({ data, updateData }: StepProps) {
       </div>
 
       {/* Instance Alias */}
-      {data.createConnectInstance && (
+      {config.connect.createConnectInstance && (
         <div>
           <label htmlFor="instanceAlias" className="block text-sm font-medium text-gray-700 mb-1">
             Connect Instance Alias *
@@ -45,8 +44,8 @@ export function ConnectStep({ data, updateData }: StepProps) {
           <input
             type="text"
             id="instanceAlias"
-            value={data.connectInstanceAlias}
-            onChange={(e) => updateData({ connectInstanceAlias: e.target.value })}
+            value={config.connect.instanceAlias || ''}
+            onChange={(e) => updateConnect({ instanceAlias: e.target.value })}
             className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
             placeholder="census-contact-center"
           />
@@ -56,7 +55,7 @@ export function ConnectStep({ data, updateData }: StepProps) {
         </div>
       )}
 
-      {!data.createConnectInstance && (
+      {!config.connect.createConnectInstance && (
         <div className="p-4 rounded-lg border border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-800">
             You'll need to provide an existing Connect instance ID and ARN in the generated configuration.
@@ -65,7 +64,7 @@ export function ConnectStep({ data, updateData }: StepProps) {
       )}
 
       {/* Additional Options (shown in comprehensive mode) */}
-      {data.mode === 'comprehensive' && (
+      {config.mode === 'comprehensive' && (
         <div className="space-y-4 pt-4 border-t border-gray-200">
           <h3 className="font-medium text-gray-900">Additional Connect Options</h3>
           

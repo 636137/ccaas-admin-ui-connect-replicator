@@ -1,11 +1,10 @@
-import { type WizardData } from '../ConfigWizard'
+import { type WizardStepProps } from '@/types/wizard'
 
-interface StepProps {
-  data: WizardData
-  updateData: (updates: Partial<WizardData>) => void
-}
+export function BasicInfoStep({ config, onChange }: WizardStepProps) {
+  const updateBasic = (updates: Partial<typeof config.basic>) => {
+    onChange({ ...config, basic: { ...config.basic, ...updates } })
+  }
 
-export function BasicInfoStep({ data, updateData }: StepProps) {
   return (
     <div className="space-y-6">
       <div>
@@ -21,8 +20,8 @@ export function BasicInfoStep({ data, updateData }: StepProps) {
           <input
             type="text"
             id="projectName"
-            value={data.projectName}
-            onChange={(e) => updateData({ projectName: e.target.value })}
+            value={config.basic.projectName}
+            onChange={(e) => updateBasic({ projectName: e.target.value })}
             className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
             placeholder="census-ccaas"
           />
@@ -35,8 +34,8 @@ export function BasicInfoStep({ data, updateData }: StepProps) {
           </label>
           <select
             id="environment"
-            value={data.environment}
-            onChange={(e) => updateData({ environment: e.target.value as 'dev' | 'staging' | 'prod' })}
+            value={config.basic.environment}
+            onChange={(e) => updateBasic({ environment: e.target.value as 'dev' | 'staging' | 'prod' })}
             className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
           >
             <option value="dev">Development</option>
@@ -52,8 +51,8 @@ export function BasicInfoStep({ data, updateData }: StepProps) {
           <input
             type="email"
             id="owner"
-            value={data.owner}
-            onChange={(e) => updateData({ owner: e.target.value })}
+            value={config.basic.owner}
+            onChange={(e) => updateBasic({ owner: e.target.value })}
             className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
             placeholder="admin@agency.gov"
           />

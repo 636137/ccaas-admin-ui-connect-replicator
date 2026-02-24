@@ -1,83 +1,77 @@
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import type { WizardConfig } from '../types'
+import { getDefaultWizardConfig } from '../services/validation'
 
 // Wizard Steps
 import { BasicInfoStep } from './wizard/BasicInfoStep'
 import { RegionModelStep } from './wizard/RegionModelStep'
 import { ConnectStep } from './wizard/ConnectStep'
+import UsersStep from './wizard/UsersStep'
+import LexStep from './wizard/LexStep'
+import LambdaStep from './wizard/LambdaStep'
+import DynamoDBStep from './wizard/DynamoDBStep'
+import VPCStep from './wizard/VPCStep'
 import { SecurityStep } from './wizard/SecurityStep'
+import MonitoringStep from './wizard/MonitoringStep'
+import BackupStep from './wizard/BackupStep'
 import { ReviewStep } from './wizard/ReviewStep'
 
-export interface WizardData {
-  // Basic Info
-  projectName: string
-  environment: 'dev' | 'staging' | 'prod'
-  owner: string
-  
-  // Region & Model
-  awsRegion: string
-  bedrockModelId: string
-  
-  // Connect
-  createConnectInstance: boolean
-  connectInstanceAlias: string
-  
-  // Security (optional)
-  enableFedrampCompliance: boolean
-  enableWaf: boolean
-  
-  // Mode
-  mode: 'mvp' | 'comprehensive'
+interface WizardStep {
+  id: string
+  name: string
+  path: string
+  showInMvp: boolean
+  component: React.ComponentType<any>
 }
 
-const defaultData: WizardData = {
-  projectName: 'census-ccaas',
-  environment: 'dev',
-  owner: '',
-  awsRegion: 'us-east-1',
-  bedrockModelId: 'anthropic.claude-sonnet-4-5-20250929-v1:0',
-  createConnectInstance: true,
-  connectInstanceAlias: '',
-  enableFedrampCompliance: false,
-  enableWaf: false,
-  mode: 'mvp',
-}
-
-const STEPS = [
-  { id: 'basic', name: 'Basic Info', path: '' },
-  { id: 'region', name: 'Region & Model', path: 'region' },
-  { id: 'connect', name: 'Connect Setup', path: 'connect' },
-  { id: 'security', name: 'Security', path: 'security' },
-  { id: 'review', name: 'Review', path: 'review' },
+const STEPS: WizardStep[] = [
+  { id: 'basic', name: 'Basic Info', path: '', showInMvp: true, component: BasicInfoStep },
+  { id: 'region', name: 'Region & Model', path: 'region', showInMvp: true, component: RegionModelStep },
+  { id: 'connect', name: 'Connect', path: 'connect', showInMvp: true, component: ConnectStep },
+  { id: 'users', name: 'Users', path: 'users', showInMvp: true, component: UsersStep },
+  { id: 'lex', name: 'Lex Bot', path: 'lex', showInMvp: false, component: LexStep },
+  { id: 'lambda', name: 'Lambda', path: 'lambda', showInMvp: false, component: LambdaStep },
+  { id: 'dynamodb', name: 'DynamoDB', path: 'dynamodb', showInMvp: false, component: DynamoDBStep },
+  { id: 'vpc', name: 'VPC', path: 'vpc', showInMvp: false, component: VPCStep },
+  { id: 'security', name: 'Security', path: 'security', showInMvp: true, component: SecurityStep },
+  { id: 'monitoring', name: 'Monitoring', path: 'monitoring', showInMvp: false, component: MonitoringStep },
+  { id: 'backup', name: 'Backup', path: 'backup', showInMvp: false, component: BackupStep },
+  { id: 'review', name: 'Review', path: 'review', showInMvp: true, component: ReviewStep },
 ]
 
 export function ConfigWizard() {
-  const [data, setData] = useState<WizardData>(defaultData)
+  const [config, setConfig] = useState<WizardConfig>(getDefaultWizardConfig())
   const [currentStep, setCurrentStep] = useState(0)
   const navigate = useNavigate()
 
-  const updateData = (updates: Partial<WizardData>) => {
-    setData(prev => ({ ...prev, ...updates }))
+  const updateConfig = (updates: Partial<WizardConfig>) => {
+    setConfig(prev => ({ ...prev, ...updates }))
   }
 
+  // Filter steps based on mode
+  const visibleSteps = config.mode === 'mvp' 
+    ? STEPS.filter(step => step.showInMvp)
+    : STEPS
+
   const nextStep = () => {
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < visibleSteps.length - 1) {
       setCurrentStep(currentStep + 1)
-      navigate(`/wizard/${STEPS[currentStep + 1].path}`)
+      navigate(`/wizard/${visibleSteps[currentStep + 1].path}`)
     }
   }
 
   const prevStep = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1)
-      navigate(`/wizard/${STEPS[currentStep - 1].path}`)
+      navigate(`/wizard/${visibleSteps[currentStep - 1].path}`)
     }
   }
 
   const goToStep = (index: number) => {
     setCurrentStep(index)
-    navigate(`/wizard/${STEPS[index].path}`)
+    navigate(`/wizard/${visibleSteps[index].path}`)
   }
 
   return (
@@ -94,107 +88,98 @@ export function ConfigWizard() {
         <span className="text-sm font-medium text-gray-700">Mode:</span>
         <div className="flex rounded-lg border border-gray-200 p-1">
           <button
-            onClick={() => updateData({ mode: 'mvp' })}
+            onClick={() => updateConfig({ mode: 'mvp' })}
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              data.mode === 'mvp'
+              config.mode === 'mvp'
                 ? 'bg-blue-600 text-white'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            MVP (Quick Start)
+            MVP ({visibleSteps.length} steps)
           </button>
           <button
-            onClick={() => updateData({ mode: 'comprehensive' })}
+            onClick={() => updateConfig({ mode: 'comprehensive' })}
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              data.mode === 'comprehensive'
+              config.mode === 'comprehensive'
                 ? 'bg-blue-600 text-white'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Comprehensive
+            Comprehensive (12 steps)
           </button>
         </div>
+        <span className="text-xs text-gray-500">
+          {config.mode === 'mvp' 
+            ? 'Essential settings only' 
+            : 'Full control over all configuration options'}
+        </span>
       </div>
 
       {/* Progress Steps */}
-      <div className="mb-8">
-        <nav aria-label="Progress">
-          <ol className="flex items-center">
-            {STEPS.map((step, index) => (
-              <li key={step.id} className={`relative ${index !== STEPS.length - 1 ? 'pr-8 sm:pr-20 flex-1' : ''}`}>
-                <button
-                  onClick={() => goToStep(index)}
-                  className="group flex items-center"
-                >
-                  <span className="flex items-center">
-                    <span
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
-                        index < currentStep
-                          ? 'bg-blue-600 border-blue-600'
-                          : index === currentStep
-                          ? 'border-blue-600 bg-white'
-                          : 'border-gray-300 bg-white'
-                      }`}
-                    >
-                      {index < currentStep ? (
-                        <Check className="h-5 w-5 text-white" />
-                      ) : (
-                        <span className={index === currentStep ? 'text-blue-600' : 'text-gray-500'}>
-                          {index + 1}
-                        </span>
-                      )}
-                    </span>
+      <nav aria-label="Progress" className="mb-8">
+        <ol className="flex items-center overflow-x-auto">
+          {visibleSteps.map((step, index) => (
+            <li key={step.id} className={`relative ${index !== visibleSteps.length - 1 ? 'pr-8 sm:pr-20 flex-1' : ''}`}>
+              <button
+                onClick={() => goToStep(index)}
+                className="group flex items-center"
+              >
+                <span className="flex items-center">
+                  <span
+                    className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
+                      index < currentStep
+                        ? 'bg-blue-600 border-blue-600'
+                        : index === currentStep
+                        ? 'border-blue-600 bg-white'
+                        : 'border-gray-300 bg-white'
+                    }`}
+                  >
+                    {index < currentStep ? (
+                      <Check className="h-5 w-5 text-white" />
+                    ) : (
+                      <span className={index === currentStep ? 'text-blue-600' : 'text-gray-500'}>
+                        {index + 1}
+                      </span>
+                    )}
                   </span>
-                  <span className="ml-3 text-sm font-medium text-gray-900 hidden sm:block">
-                    {step.name}
-                  </span>
-                </button>
-                {index !== STEPS.length - 1 && (
-                  <div className="absolute top-5 left-10 -ml-px h-0.5 w-full bg-gray-200 sm:left-20" />
-                )}
-              </li>
-            ))}
-          </ol>
-        </nav>
-      </div>
+                </span>
+                <span className="ml-3 text-sm font-medium text-gray-900 hidden sm:block whitespace-nowrap">
+                  {step.name}
+                </span>
+              </button>
+              {index !== visibleSteps.length - 1 && (
+                <div className="absolute top-5 left-10 -ml-px h-0.5 w-full bg-gray-200 sm:left-20" />
+              )}
+            </li>
+          ))}
+        </ol>
+      </nav>
 
       {/* Step Content */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 min-h-[400px]">
+      <div className="mt-8">
         <Routes>
-          <Route path="" element={<BasicInfoStep data={data} updateData={updateData} />} />
-          <Route path="region" element={<RegionModelStep data={data} updateData={updateData} />} />
-          <Route path="connect" element={<ConnectStep data={data} updateData={updateData} />} />
-          <Route path="security" element={<SecurityStep data={data} updateData={updateData} />} />
-          <Route path="review" element={<ReviewStep data={data} />} />
+          {visibleSteps.map((step) => {
+            const StepComponent = step.component
+            return (
+              <Route
+                key={step.id}
+                path={step.path}
+                element={
+                  <StepComponent
+                    config={config}
+                    onChange={updateConfig}
+                    onNext={nextStep}
+                    onPrevious={prevStep}
+                  />
+                }
+              />
+            )
+          })}
         </Routes>
-      </div>
-
-      {/* Navigation Buttons */}
-      <div className="mt-6 flex justify-between">
-        <button
-          onClick={prevStep}
-          disabled={currentStep === 0}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <ChevronLeft className="h-4 w-4" /> Previous
-        </button>
-        
-        {currentStep < STEPS.length - 1 ? (
-          <button
-            onClick={nextStep}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
-            Next <ChevronRight className="h-4 w-4" />
-          </button>
-        ) : (
-          <button
-            onClick={() => {/* Generate config */}}
-            className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
-          >
-            Generate Configuration
-          </button>
-        )}
       </div>
     </div>
   )
 }
+
+// Legacy export for backward compatibility
+export type WizardData = WizardConfig

@@ -1,4 +1,4 @@
-import { type WizardData } from '../ConfigWizard'
+import { type WizardStepProps } from '@/types/wizard'
 import { 
   CLAUDE_MODELS, 
   TIER_INFO, 
@@ -6,11 +6,6 @@ import {
   DEFAULT_MODEL 
 } from '@/config/bedrock-models'
 import { Check, AlertTriangle } from 'lucide-react'
-
-interface StepProps {
-  data: WizardData
-  updateData: (updates: Partial<WizardData>) => void
-}
 
 const AWS_REGIONS = [
   { value: 'us-east-1', label: 'US East (N. Virginia)', recommended: true },
@@ -27,19 +22,29 @@ const AWS_REGIONS = [
   { value: 'sa-east-1', label: 'South America (São Paulo)' },
 ]
 
-export function RegionModelStep({ data, updateData }: StepProps) {
-  const availableModels = getModelsForRegion(data.awsRegion)
-  const isModelAvailable = availableModels.some(m => m.id === data.bedrockModelId)
+export function RegionModelStep({ config, onChange }: WizardStepProps) {
+  const availableModels = getModelsForRegion(config.basic.awsRegion)
+  const isModelAvailable = availableModels.some(m => m.id === config.aiModel.bedrockModelId)
   
   // Reset model if not available in selected region
   const handleRegionChange = (region: string) => {
-    updateData({ awsRegion: region })
     const modelsInRegion = getModelsForRegion(region)
-    if (!modelsInRegion.some(m => m.id === data.bedrockModelId)) {
-      // Select recommended model or first available
-      const recommended = modelsInRegion.find(m => m.recommended)
-      updateData({ bedrockModelId: recommended?.id || modelsInRegion[0]?.id || DEFAULT_MODEL.id })
-    }
+    const newModelId = modelsInRegion.some(m => m.id === config.aiModel.bedrockModelId)
+      ? config.aiModel.bedrockModelId
+      : (modelsInRegion.find(m => m.recommended)?.id || modelsInRegion[0]?.id || DEFAULT_MODEL.id)
+    
+    onChange({ 
+      ...config, 
+      basic: { ...config.basic, awsRegion: region },
+      aiModel: { ...config.aiModel, bedrockModelId: newModelId }
+    })
+  }
+
+  const handleModelChange = (modelId: string) => {
+    onChange({ 
+      ...config, 
+      aiModel: { ...config.aiModel, bedrockModelId: modelId }
+    })
   }
 
   const tierColors: Record<string, string> = {
@@ -63,7 +68,7 @@ export function RegionModelStep({ data, updateData }: StepProps) {
         </label>
         <select
           id="region"
-          value={data.awsRegion}
+          value={config.basic.awsRegion}
           onChange={(e) => handleRegionChange(e.target.value)}
           className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
         >
@@ -88,7 +93,7 @@ export function RegionModelStep({ data, updateData }: StepProps) {
               ))}
           </optgroup>
         </select>
-        {data.awsRegion.startsWith('us-gov-') && (
+        {config.basic.awsRegion.startsWith('us-gov-') && (
           <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
             <AlertTriangle className="h-3 w-3" /> GovCloud region - limited model availability
           </p>
@@ -98,10 +103,10 @@ export function RegionModelStep({ data, updateData }: StepProps) {
       {/* Model Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
-          Claude AI Model * ({availableModels.length} available in {data.awsRegion})
+          Claude AI Model * ({availableModels.length} available in {config.basic.awsRegion})
         </label>
         
-        {!isModelAvailable && data.bedrockModelId && (
+        {!isModelAvailable && config.aiModel.bedrockModelId && (
           <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
             Selected model is not available in this region. Please choose another.
           </div>
@@ -110,13 +115,13 @@ export function RegionModelStep({ data, updateData }: StepProps) {
         <div className="space-y-3">
           {availableModels.map((model) => {
             const tierInfo = TIER_INFO[model.tier]
-            const isSelected = data.bedrockModelId === model.id
+            const isSelected = config.aiModel.bedrockModelId === model.id
             
             return (
               <button
                 key={model.id}
                 type="button"
-                onClick={() => updateData({ bedrockModelId: model.id })}
+                onClick={() => handleModelChange(model.id)}
                 className={`w-full text-left rounded-lg border-2 p-4 transition-all ${
                   isSelected 
                     ? 'border-blue-500 ring-2 ring-blue-200' 

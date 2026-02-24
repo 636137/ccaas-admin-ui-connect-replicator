@@ -1,41 +1,33 @@
-import { type WizardData } from '../ConfigWizard'
+import { type WizardStepProps } from '@/types/wizard'
 import { getModelById } from '@/config/bedrock-models'
-import { Check, Copy, Download, FileCode } from 'lucide-react'
+import { Check, Download, FileCode, Package, AlertCircle } from 'lucide-react'
 import { useState } from 'react'
+import { apiClient } from '@/services/api'
 
-interface ReviewStepProps {
-  data: WizardData
-}
+export function ReviewStep({ config }: WizardStepProps) {
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const model = getModelById(config.aiModel.bedrockModelId)
 
-export function ReviewStep({ data }: ReviewStepProps) {
-  const [copied, setCopied] = useState(false)
-  const model = getModelById(data.bedrockModelId)
-
-  const terraformConfig = generateTerraformConfig(data)
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(terraformConfig)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const handleDownload = () => {
-    const blob = new Blob([terraformConfig], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'terraform.tfvars'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  const handleDownload = async () => {
+    setIsGenerating(true)
+    setError(null)
+    
+    try {
+      await apiClient.downloadPackage(config, `${config.basic.projectName}-${config.basic.environment}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate package')
+      console.error('Package generation error:', err)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-1">Review Configuration</h2>
-        <p className="text-sm text-gray-500">Review your settings and generate the configuration files.</p>
+        <p className="text-sm text-gray-500">Review your settings and generate the deployment package.</p>
       </div>
 
       {/* Summary */}
@@ -45,15 +37,19 @@ export function ReviewStep({ data }: ReviewStepProps) {
           <dl className="space-y-2">
             <div className="flex justify-between">
               <dt className="text-sm text-gray-600">Project Name</dt>
-              <dd className="text-sm font-medium text-gray-900">{data.projectName}</dd>
+              <dd className="text-sm font-medium text-gray-900">{config.basic.projectName}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-sm text-gray-600">Environment</dt>
-              <dd className="text-sm font-medium text-gray-900">{data.environment}</dd>
+              <dd className="text-sm font-medium text-gray-900">{config.basic.environment}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-sm text-gray-600">Owner</dt>
-              <dd className="text-sm font-medium text-gray-900">{data.owner || '-'}</dd>
+              <dd className="text-sm font-medium text-gray-900">{config.basic.owner || '-'}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-sm text-gray-600">Mode</dt>
+              <dd className="text-sm font-medium text-gray-900 capitalize">{config.mode}</dd>
             </div>
           </dl>
         </div>
@@ -63,105 +59,134 @@ export function ReviewStep({ data }: ReviewStepProps) {
           <dl className="space-y-2">
             <div className="flex justify-between">
               <dt className="text-sm text-gray-600">AWS Region</dt>
-              <dd className="text-sm font-medium text-gray-900">{data.awsRegion}</dd>
+              <dd className="text-sm font-medium text-gray-900">{config.basic.awsRegion}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-sm text-gray-600">AI Model</dt>
-              <dd className="text-sm font-medium text-gray-900">{model?.name || data.bedrockModelId}</dd>
+              <dd className="text-sm font-medium text-gray-900 truncate" title={model?.name}>
+                {model?.name || config.aiModel.bedrockModelId}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-sm text-gray-600">Connect Instance</dt>
               <dd className="text-sm font-medium text-gray-900">
-                {data.createConnectInstance ? data.connectInstanceAlias || 'New' : 'Existing'}
+                {config.connect.createConnectInstance ? (config.connect.instanceAlias || 'New') : 'Existing'}
               </dd>
             </div>
           </dl>
         </div>
 
         <div className="p-4 rounded-lg border border-gray-200 bg-white md:col-span-2">
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Security</h3>
-          <div className="flex gap-4">
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Security & Compliance</h3>
+          <div className="flex gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <div className={`rounded-full p-1 ${data.enableFedrampCompliance ? 'bg-green-100' : 'bg-gray-100'}`}>
-                <Check className={`h-4 w-4 ${data.enableFedrampCompliance ? 'text-green-600' : 'text-gray-400'}`} />
+              <div className={`rounded-full p-1 ${config.security.enableFedRampCompliance ? 'bg-green-100' : 'bg-gray-100'}`}>
+                <Check className={`h-4 w-4 ${config.security.enableFedRampCompliance ? 'text-green-600' : 'text-gray-400'}`} />
               </div>
               <span className="text-sm text-gray-700">FedRAMP Compliance</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className={`rounded-full p-1 ${data.enableWaf ? 'bg-green-100' : 'bg-gray-100'}`}>
-                <Check className={`h-4 w-4 ${data.enableWaf ? 'text-green-600' : 'text-gray-400'}`} />
+              <div className={`rounded-full p-1 ${config.waf?.enableWaf ? 'bg-green-100' : 'bg-gray-100'}`}>
+                <Check className={`h-4 w-4 ${config.waf?.enableWaf ? 'text-green-600' : 'text-gray-400'}`} />
               </div>
               <span className="text-sm text-gray-700">WAF Protection</span>
             </div>
+            {config.mode === 'comprehensive' && (
+              <>
+                <div className="flex items-center gap-2">
+                  <div className={`rounded-full p-1 ${config.vpc ? 'bg-green-100' : 'bg-gray-100'}`}>
+                    <Check className={`h-4 w-4 ${config.vpc ? 'text-green-600' : 'text-gray-400'}`} />
+                  </div>
+                  <span className="text-sm text-gray-700">VPC Configuration</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`rounded-full p-1 ${config.backup?.enableBackup ? 'bg-green-100' : 'bg-gray-100'}`}>
+                    <Check className={`h-4 w-4 ${config.backup?.enableBackup ? 'text-green-600' : 'text-gray-400'}`} />
+                  </div>
+                  <span className="text-sm text-gray-700">AWS Backup</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Generated Config */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-gray-900 flex items-center gap-2">
-            <FileCode className="h-4 w-4" /> terraform.tfvars
-          </h3>
-          <div className="flex gap-2">
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-            <button
-              onClick={handleDownload}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-            >
-              <Download className="h-4 w-4" /> Download
-            </button>
+      {/* Package Contents */}
+      <div className="p-4 rounded-lg border border-blue-200 bg-blue-50">
+        <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+          <Package className="h-5 w-5" /> Deployment Package Contents
+        </h3>
+        <p className="text-sm text-blue-800 mb-3">
+          The generated package will include all files needed for deployment:
+        </p>
+        <ul className="space-y-1 text-sm text-blue-800">
+          <li className="flex items-center gap-2">
+            <FileCode className="h-4 w-4" />
+            <code className="font-mono">terraform.tfvars</code> - Infrastructure variables
+          </li>
+          <li className="flex items-center gap-2">
+            <FileCode className="h-4 w-4" />
+            <code className="font-mono">agent-configuration-bedrock.json</code> - Bedrock agent config
+          </li>
+          <li className="flex items-center gap-2">
+            <FileCode className="h-4 w-4" />
+            <code className="font-mono">agent-configuration-connect.json</code> - Connect agent config
+          </li>
+          <li className="flex items-center gap-2">
+            <FileCode className="h-4 w-4" />
+            <code className="font-mono">lex-bot-definition.json</code> - Lex bot definition
+          </li>
+          <li className="flex items-center gap-2">
+            <FileCode className="h-4 w-4" />
+            <code className="font-mono">README.md</code> - Deployment instructions
+          </li>
+        </ul>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 rounded-lg border border-red-200 bg-red-50 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-medium text-red-900">Generation Failed</h3>
+            <p className="text-sm text-red-800 mt-1">{error}</p>
           </div>
         </div>
-        <pre className="p-4 rounded-lg bg-gray-900 text-gray-100 text-sm overflow-x-auto font-mono">
-          {terraformConfig}
-        </pre>
+      )}
+
+      {/* Download Button */}
+      <div className="flex justify-center pt-4">
+        <button
+          onClick={handleDownload}
+          disabled={isGenerating}
+          className="flex items-center gap-2 px-6 py-3 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {isGenerating ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              Generating Package...
+            </>
+          ) : (
+            <>
+              <Download className="h-5 w-5" />
+              Download Deployment Package
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Next Steps */}
+      <div className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+        <h3 className="font-medium text-gray-900 mb-2">Next Steps</h3>
+        <ol className="list-decimal list-inside space-y-1 text-sm text-gray-700">
+          <li>Download the deployment package</li>
+          <li>Extract the ZIP file to your working directory</li>
+          <li>Review the generated <code className="font-mono">README.md</code> for deployment instructions</li>
+          <li>Initialize Terraform: <code className="font-mono bg-white px-1 rounded">terraform init</code></li>
+          <li>Review the plan: <code className="font-mono bg-white px-1 rounded">terraform plan</code></li>
+          <li>Deploy: <code className="font-mono bg-white px-1 rounded">terraform apply</code></li>
+        </ol>
       </div>
     </div>
   )
-}
-
-function generateTerraformConfig(data: WizardData): string {
-  return `# Government CCaaS in a Box - Terraform Configuration
-# Generated: ${new Date().toISOString()}
-# Mode: ${data.mode.toUpperCase()}
-
-# ============================================
-# Basic Configuration
-# ============================================
-aws_region   = "${data.awsRegion}"
-environment  = "${data.environment}"
-project_name = "${data.projectName}"
-owner        = "${data.owner}"
-
-# ============================================
-# Amazon Connect
-# ============================================
-create_connect_instance = ${data.createConnectInstance}
-${data.connectInstanceAlias ? `connect_instance_alias  = "${data.connectInstanceAlias}"` : '# connect_instance_alias  = "your-instance-alias"'}
-
-# ============================================
-# AI / Bedrock Configuration
-# ============================================
-bedrock_model_id = "${data.bedrockModelId}"
-
-# ============================================
-# Security & Compliance
-# ============================================
-enable_fedramp_compliance = ${data.enableFedrampCompliance}
-enable_waf                = ${data.enableWaf}
-${data.enableFedrampCompliance ? `
-# FedRAMP compliance enables these additional features:
-# - KMS encryption for data at rest
-# - VPC with private subnets
-# - CloudTrail audit logging
-# - AWS Config compliance rules
-# - Automated backups` : ''}
-`
 }

@@ -2,6 +2,8 @@ import express from 'express'
 import cors from 'cors'
 import { configRoutes } from './routes/config.js'
 import { deployRoutes } from './routes/deploy.js'
+import packageRoutes from './routes/package.js'
+import prerequisitesRoutes from './routes/prerequisites.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -17,6 +19,8 @@ app.get('/api/health', (_, res) => {
 // Routes
 app.use('/api/config', configRoutes)
 app.use('/api/deploy', deployRoutes)
+app.use('/api/package', packageRoutes)
+app.use('/api/prerequisites', prerequisitesRoutes)
 
 app.listen(PORT, () => {
   console.log(`API server running on http://localhost:${PORT}`)
