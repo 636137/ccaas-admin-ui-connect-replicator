@@ -38,14 +38,14 @@ export function ConnectStep({ config, onChange }: WizardStepProps) {
       {/* Instance Alias */}
       {config.connect.createConnectInstance && (
         <div>
-          <label htmlFor="instanceAlias" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="connectInstanceAlias" className="block text-sm font-medium text-gray-700 mb-1">
             Connect Instance Alias *
           </label>
           <input
             type="text"
-            id="instanceAlias"
-            value={config.connect.instanceAlias || ''}
-            onChange={(e) => updateConnect({ instanceAlias: e.target.value })}
+            id="connectInstanceAlias"
+            value={config.connect.connectInstanceAlias || ''}
+            onChange={(e) => updateConnect({ connectInstanceAlias: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
             className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:ring-blue-500"
             placeholder="census-contact-center"
           />

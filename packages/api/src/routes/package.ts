@@ -105,6 +105,48 @@ router.post('/generate', async (req: Request, res: Response) => {
       })
     }
 
+    // Provide defaults for optional sections - merge with provided config to fill missing values
+    const wafDefaults = { rateLimit: 2000, enableGeoRestriction: false, allowedCountries: ['US'] }
+    const waf = { ...wafDefaults, ...(config.waf || {}) }
+    
+    const monitoringDefaults = { enableDetailedMonitoring: true, logRetentionDays: 90 }
+    const monitoring = { ...monitoringDefaults, ...(config.monitoring || {}) }
+    
+    const backupDefaults = { enableBackup: true, enableCrossRegionBackup: false }
+    const backup = { ...backupDefaults, ...(config.backup || {}) }
+    
+    const validationDefaults = { enableValidationModule: false, aiAccuracyThreshold: 85, aiLatencyThreshold: 5000 }
+    const validation = { ...validationDefaults, ...(config.validation || {}) }
+    
+    const securityDefaults = { enableFedRampCompliance: false, enableWaf: false, enableKmsEncryption: true, auditLogRetentionDays: 365, deployInVpc: true }
+    const security = { ...securityDefaults, ...(config.security || {}) }
+    
+    const vpcDefaults = { useExistingVpc: false, vpcCidr: '10.0.0.0/16', enableVpcEndpoints: true, availabilityZones: [`${config.basic.awsRegion}a`, `${config.basic.awsRegion}b`], enableNatGateway: true, singleNatGateway: false }
+    const vpc = { ...vpcDefaults, ...(config.vpc || {}) }
+    
+    const connectDefaults = { createConnectInstance: true, connectInstanceAlias: '' }
+    const connect = { ...connectDefaults, ...(config.connect || {}) }
+    
+    const usersDefaults = { agentEmails: [], supervisorEmail: '' }
+    const users = { ...usersDefaults, ...(config.users || {}) }
+    
+    const lexDefaults = { voiceId: 'Joanna', locale: 'en_US', nluConfidenceThreshold: 0.4 }
+    const lex = { ...lexDefaults, ...(config.lex || {}) }
+    
+    const lambdaDefaults = { runtime: 'nodejs18.x', timeout: 30, memorySize: 256 }
+    const lambda = { ...lambdaDefaults, ...(config.lambda || {}) }
+    
+    const dynamodbDefaults = { billingMode: 'PAY_PER_REQUEST', enableEncryption: true, enablePointInTimeRecovery: true }
+    const dynamodb = { ...dynamodbDefaults, ...(config.dynamodb || {}) }
+
+    // Derive Connect alias from project name if not provided, sanitized for AWS requirements
+    const sanitizedProjectName = config.basic.projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-|-$/g, '')
+    const connectAlias = connect.connectInstanceAlias || sanitizedProjectName || 'ccaas-instance'
+    
+    // Filter out empty emails
+    const filteredAgentEmails = users.agentEmails.filter((email: string) => email && email.trim() !== '')
+    const filteredSupervisorEmail = users.supervisorEmail?.trim() || ''
+
     // Flatten config for generator functions
     const flatConfig = {
       mode: config.mode,
@@ -113,52 +155,52 @@ router.post('/generate', async (req: Request, res: Response) => {
       owner: config.basic.owner,
       awsRegion: config.basic.awsRegion,
       bedrockModelId: config.aiModel.bedrockModelId,
-      createConnectInstance: config.connect.createConnectInstance,
-      connectInstanceAlias: config.connect.connectInstanceAlias,
-      agentEmails: config.users.agentEmails,
-      supervisorEmail: config.users.supervisorEmail,
-      lexVoiceId: config.lex.voiceId,
-      lexLocale: config.lex.locale,
-      lexNluConfidenceThreshold: config.lex.nluConfidenceThreshold,
-      lambdaRuntime: config.lambda.runtime,
-      lambdaTimeout: config.lambda.timeout,
-      lambdaMemorySize: config.lambda.memorySize,
-      dynamodbBillingMode: config.dynamodb.billingMode,
-      dynamodbEnableEncryption: config.dynamodb.enableEncryption,
-      dynamodbEnablePointInTimeRecovery: config.dynamodb.enablePointInTimeRecovery,
-      vpcUseExisting: config.vpc.useExistingVpc,
-      vpcCidr: config.vpc.vpcCidr,
-      vpcId: config.vpc.vpcId,
-      vpcSubnetIds: config.vpc.subnetIds,
-      vpcSecurityGroupIds: config.vpc.securityGroupIds,
-      vpcAvailabilityZones: config.vpc.availabilityZones,
-      vpcEnableNatGateway: config.vpc.enableNatGateway,
-      vpcSingleNatGateway: config.vpc.singleNatGateway,
-      vpcEnableVpcEndpoints: config.vpc.enableVpcEndpoints,
-      enableFedrampCompliance: config.security.enableFedRampCompliance,
-      enableWaf: config.security.enableWaf,
-      enableKmsEncryption: config.security.enableKmsEncryption,
-      kmsKeyArn: config.security.kmsKeyArn,
-      securityContactEmail: config.security.securityContactEmail,
-      auditLogRetentionDays: config.security.auditLogRetentionDays,
-      deployInVpc: config.security.deployInVpc,
-      kmsKeyAdministrators: config.security.kmsKeyAdministrators,
-      securityNotificationArns: config.security.securityNotificationArns,
-      wafRateLimit: config.waf.rateLimit,
-      wafEnableGeoRestriction: config.waf.enableGeoRestriction,
-      wafAllowedCountries: config.waf.allowedCountries,
-      wafIpWhitelist: config.waf.ipWhitelist,
-      alarmSnsTopicArn: config.monitoring.alarmSnsTopicArn,
-      enableDetailedMonitoring: config.monitoring.enableDetailedMonitoring,
-      logRetentionDays: config.monitoring.logRetentionDays,
-      enableBackup: config.backup.enableBackup,
-      enableCrossRegionBackup: config.backup.enableCrossRegionBackup,
-      drVaultArn: config.backup.drVaultArn,
-      backupAdminRoleArns: config.backup.backupAdminRoleArns,
-      enableValidationModule: config.validation.enableValidationModule,
-      validationNotificationEmail: config.validation.validationNotificationEmail,
-      aiAccuracyThreshold: config.validation.aiAccuracyThreshold,
-      aiLatencyThreshold: config.validation.aiLatencyThreshold,
+      createConnectInstance: connect.createConnectInstance,
+      connectInstanceAlias: connectAlias,
+      agentEmails: filteredAgentEmails,
+      supervisorEmail: filteredSupervisorEmail,
+      lexVoiceId: lex.voiceId,
+      lexLocale: lex.locale,
+      lexNluConfidenceThreshold: lex.nluConfidenceThreshold,
+      lambdaRuntime: lambda.runtime,
+      lambdaTimeout: lambda.timeout,
+      lambdaMemorySize: lambda.memorySize,
+      dynamodbBillingMode: dynamodb.billingMode,
+      dynamodbEnableEncryption: dynamodb.enableEncryption,
+      dynamodbEnablePointInTimeRecovery: dynamodb.enablePointInTimeRecovery,
+      vpcUseExisting: vpc.useExistingVpc,
+      vpcCidr: vpc.vpcCidr || '10.0.0.0/16',
+      vpcId: vpc.vpcId,
+      vpcSubnetIds: vpc.subnetIds,
+      vpcSecurityGroupIds: vpc.securityGroupIds,
+      vpcAvailabilityZones: vpc.availabilityZones?.length ? vpc.availabilityZones : [`${config.basic.awsRegion}a`, `${config.basic.awsRegion}b`],
+      vpcEnableNatGateway: vpc.enableNatGateway,
+      vpcSingleNatGateway: vpc.singleNatGateway,
+      vpcEnableVpcEndpoints: vpc.enableVpcEndpoints,
+      enableFedrampCompliance: security.enableFedRampCompliance,
+      enableWaf: security.enableWaf,
+      enableKmsEncryption: security.enableKmsEncryption,
+      kmsKeyArn: security.kmsKeyArn,
+      securityContactEmail: security.securityContactEmail && security.securityContactEmail !== 'undefined' ? security.securityContactEmail : '',
+      auditLogRetentionDays: security.auditLogRetentionDays,
+      deployInVpc: security.deployInVpc,
+      kmsKeyAdministrators: security.kmsKeyAdministrators,
+      securityNotificationArns: security.securityNotificationArns,
+      wafRateLimit: waf.rateLimit,
+      wafEnableGeoRestriction: waf.enableGeoRestriction,
+      wafAllowedCountries: waf.allowedCountries,
+      wafIpWhitelist: waf.ipWhitelist,
+      alarmSnsTopicArn: monitoring.alarmSnsTopicArn,
+      enableDetailedMonitoring: monitoring.enableDetailedMonitoring,
+      logRetentionDays: monitoring.logRetentionDays,
+      enableBackup: backup.enableBackup,
+      enableCrossRegionBackup: backup.enableCrossRegionBackup,
+      drVaultArn: backup.drVaultArn,
+      backupAdminRoleArns: backup.backupAdminRoleArns,
+      enableValidationModule: validation.enableValidationModule,
+      validationNotificationEmail: validation.validationNotificationEmail,
+      aiAccuracyThreshold: validation.aiAccuracyThreshold,
+      aiLatencyThreshold: validation.aiLatencyThreshold,
     }
 
     // Generate all files

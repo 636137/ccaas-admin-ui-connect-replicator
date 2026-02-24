@@ -70,7 +70,7 @@ export function ReviewStep({ config }: WizardStepProps) {
             <div className="flex justify-between">
               <dt className="text-sm text-gray-600">Connect Instance</dt>
               <dd className="text-sm font-medium text-gray-900">
-                {config.connect.createConnectInstance ? (config.connect.instanceAlias || 'New') : 'Existing'}
+                {config.connect.createConnectInstance ? (config.connect.connectInstanceAlias || 'New') : 'Existing'}
               </dd>
             </div>
           </dl>

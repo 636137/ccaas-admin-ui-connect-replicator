@@ -148,7 +148,7 @@ ${input.kmsKeyArn ? `kms_key_arn           = "${input.kmsKeyArn}"` : '# kms_key_
 # ============================================
 enable_fedramp_compliance = ${input.enableFedrampCompliance}
 ${input.enableFedrampCompliance ? `audit_log_retention_days  = ${input.auditLogRetentionDays}
-security_contact_email    = "${input.securityContactEmail}"
+${input.securityContactEmail ? `security_contact_email    = "${input.securityContactEmail}"` : '# security_contact_email    = "security@example.gov"  # REQUIRED: Set your security contact email'}
 ${input.kmsKeyAdministrators && input.kmsKeyAdministrators.length > 0 ? `kms_key_administrators    = ${JSON.stringify(input.kmsKeyAdministrators, null, 2)}` : '# kms_key_administrators    = ["arn:aws:iam::account-id:role/admin"]'}
 ${input.securityNotificationArns && input.securityNotificationArns.length > 0 ? `security_notification_arns = ${JSON.stringify(input.securityNotificationArns, null, 2)}` : '# security_notification_arns = ["arn:aws:sns:region:account-id:security-alerts"]'}
 ` : `# audit_log_retention_days  = ${input.auditLogRetentionDays}
