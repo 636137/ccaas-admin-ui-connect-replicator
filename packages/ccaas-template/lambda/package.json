@@ -1,0 +1,26 @@
+{
+  "name": "census-enumerator-agent-lambda",
+  "version": "1.0.0",
+  "description": "Lambda backend for Census Enumerator AI Agent in Amazon Connect",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "deploy": "zip -r function.zip . && aws lambda update-function-code --function-name CensusAgentBackend --zip-file fileb://function.zip",
+    "lint": "eslint index.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.400.0",
+    "@aws-sdk/client-dynamodb": "^3.400.0",
+    "@aws-sdk/lib-dynamodb": "^3.400.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.50.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Census Bureau",
+  "license": "MIT"
+}

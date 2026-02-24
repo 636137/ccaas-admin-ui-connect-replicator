@@ -1,0 +1,396 @@
+{
+  "_docs": {
+    "WHAT": "Complete survey question definitions with separate prompts for voice (phone) and chat (web) channels",
+    "WHY": "Voice prompts must be concise and speakable; chat prompts can include formatting, bullet points, and links",
+    "HOW_TO_EDIT": "Each prompt has voicePrompt and chatPrompt - edit both to maintain consistency. Variables like {firstName} are replaced at runtime.",
+    "FLOW": "INTRO → ADDRESS → COUNT → PERSON (repeat per household member) → HOUSING → COMPLETION. EXIT paths handle refusals."
+  },
+  "surveyName": "Census Enumerator Survey 2020",
+  "version": "1.0",
+  "referenceDate": "2020-04-01",
+  "sections": [
+    {
+      "_docs": "INTRO: Establishes trust, explains confidentiality, gets consent to proceed",
+      "sectionId": "INTRO",
+      "sectionName": "Introduction and Consent",
+      "prompts": [
+        {
+          "promptId": "INTRO_GREETING",
+          "voicePrompt": "Hello! Thank you for taking the time to speak with me today. I'm an automated assistant calling on behalf of the U.S. Census Bureau to help complete your household's census information.",
+          "chatPrompt": "Hello! Thank you for connecting with us. I'm an AI assistant here on behalf of the U.S. Census Bureau to help complete your household's census information.",
+          "expectedResponse": null,
+          "nextPrompt": "INTRO_CONFIDENTIALITY"
+        },
+        {
+          "promptId": "INTRO_CONFIDENTIALITY",
+          "voicePrompt": "Your responses are protected by federal law under Title 13 of the U.S. Code and are kept strictly confidential. They will only be used for statistical purposes and cannot be shared with any other government agency.",
+          "chatPrompt": "Your responses are protected by federal law under Title 13 of the U.S. Code and are kept strictly confidential. They will only be used for statistical purposes and cannot be shared with any other government agency.",
+          "expectedResponse": null,
+          "nextPrompt": "INTRO_CONSENT"
+        },
+        {
+          "promptId": "INTRO_CONSENT",
+          "voicePrompt": "May I proceed with a few questions about your household?",
+          "chatPrompt": "May I proceed with a few questions about your household?",
+          "expectedResponse": {
+            "type": "confirmation",
+            "yesPath": "ADDRESS_VERIFY",
+            "noPath": "EXIT_REFUSED"
+          }
+        }
+      ]
+    },
+    {
+      "_docs": "ADDRESS: Verify we have the right household before collecting any data",
+      "sectionId": "ADDRESS",
+      "sectionName": "Address Verification",
+      "prompts": [
+        {
+          "promptId": "ADDRESS_VERIFY",
+          "voicePrompt": "I have your address on file as {streetAddress}, {city}, {state} {zipCode}. Is this correct?",
+          "chatPrompt": "I have your address on file as:\n\n**{streetAddress}**\n**{city}, {state} {zipCode}**\n\nIs this correct?",
+          "expectedResponse": {
+            "type": "confirmation",
+            "yesPath": "ADDRESS_RESIDENT_CHECK",
+            "noPath": "ADDRESS_WRONG"
+          }
+        },
+        {
+          "promptId": "ADDRESS_WRONG",
+          "voicePrompt": "I apologize for the inconvenience. Could you please provide the correct address where you are living?",
+          "chatPrompt": "I apologize for the inconvenience. Could you please provide the correct address where you are living?",
+          "expectedResponse": {
+            "type": "freeform",
+            "slotName": "correctedAddress",
+            "nextPrompt": "ADDRESS_CONFIRM_CORRECTION"
+          }
+        },
+        {
+          "promptId": "ADDRESS_RESIDENT_CHECK",
+          "voicePrompt": "Are you an adult resident, 18 years or older, currently living at this address?",
+          "chatPrompt": "Are you an adult resident (18 years or older) currently living at this address?",
+          "expectedResponse": {
+            "type": "confirmation",
+            "yesPath": "COUNT_TOTAL",
+            "noPath": "EXIT_NOT_RESIDENT"
+          }
+        }
+      ]
+    },
+    {
+      "_docs": "COUNT: Get total number of people - this determines how many PERSON sections we'll need",
+      "sectionId": "COUNT",
+      "sectionName": "Household Count",
+      "prompts": [
+        {
+          "promptId": "COUNT_TOTAL",
+          "voicePrompt": "As of April 1st, 2020, how many people were living or staying at this address? Please include everyone - family members, roommates, foster children, and anyone else staying there, even temporarily.",
+          "chatPrompt": "As of **April 1st, 2020**, how many people were living or staying at this address?\n\nPlease include everyone:\n- Family members\n- Roommates or housemates\n- Foster children\n- Anyone else staying there, even temporarily",
+          "expectedResponse": {
+            "type": "numeric",
+            "slotName": "householdCount",
+            "min": 1,
+            "max": 50,
+            "nextPrompt": "COUNT_CONFIRM"
+          }
+        },
+        {
+          "promptId": "COUNT_CONFIRM",
+          "voicePrompt": "Just to confirm, there were {householdCount} people living at this address. Is that correct?",
+          "chatPrompt": "Just to confirm, there were **{householdCount} people** living at this address. Is that correct?",
+          "expectedResponse": {
+            "type": "confirmation",
+            "yesPath": "PERSON_1_NAME",
+            "noPath": "COUNT_TOTAL"
+          }
+        }
+      ]
+    },
+    {
+      "_docs": "PERSON: Collect demographics for EACH household member. This section repeats for each person in householdCount.",
+      "sectionId": "PERSON",
+      "sectionName": "Person Information",
+      "repeatForEachPerson": true,
+      "prompts": [
+        {
+          "promptId": "PERSON_INTRO",
+          "voicePrompt": "Now I'll collect some information about person number {personNumber}.",
+          "chatPrompt": "Now I'll collect some information about **Person {personNumber}**.",
+          "expectedResponse": null,
+          "nextPrompt": "PERSON_NAME"
+        },
+        {
+          "promptId": "PERSON_NAME",
+          "voicePrompt": "What is this person's first and last name?",
+          "chatPrompt": "What is this person's first and last name?",
+          "expectedResponse": {
+            "type": "name",
+            "slotNames": ["firstName", "lastName"],
+            "nextPrompt": "PERSON_RELATIONSHIP"
+          }
+        },
+        {
+          "promptId": "PERSON_RELATIONSHIP",
+          "voicePrompt": "What is {firstName}'s relationship to the person you listed first? For example, spouse, child, parent, sibling, or roommate?",
+          "chatPrompt": "What is **{firstName}**'s relationship to Person 1?\n\nOptions include: Spouse, Child, Parent, Sibling, Roommate, Other relative, Other non-relative",
+          "skipForPerson1": true,
+          "person1Value": "Self (Householder)",
+          "expectedResponse": {
+            "type": "enum",
+            "slotName": "relationship",
+            "validValues": [
+              "Self (Householder)",
+              "Spouse or Partner",
+              "Biological Child",
+              "Adopted Child",
+              "Stepchild",
+              "Parent",
+              "Sibling",
+              "Grandchild",
+              "Grandparent",
+              "In-law",
+              "Other Relative",
+              "Roommate or Housemate",
+              "Foster Child",
+              "Other Non-relative"
+            ],
+            "nextPrompt": "PERSON_SEX"
+          }
+        },
+        {
+          "promptId": "PERSON_SEX",
+          "voicePrompt": "What is {firstName}'s sex? Male or female?",
+          "chatPrompt": "What is **{firstName}**'s sex?\n- Male\n- Female",
+          "expectedResponse": {
+            "type": "enum",
+            "slotName": "sex",
+            "validValues": ["Male", "Female"],
+            "nextPrompt": "PERSON_DOB"
+          }
+        },
+        {
+          "promptId": "PERSON_DOB",
+          "voicePrompt": "What is {firstName}'s date of birth? Please provide the month, day, and year.",
+          "chatPrompt": "What is **{firstName}**'s date of birth? (MM/DD/YYYY)",
+          "expectedResponse": {
+            "type": "date",
+            "slotName": "dateOfBirth",
+            "nextPrompt": "PERSON_AGE_CONFIRM"
+          }
+        },
+        {
+          "promptId": "PERSON_AGE_CONFIRM",
+          "voicePrompt": "So {firstName} was {calculatedAge} years old on April 1st, 2020. Is that correct?",
+          "chatPrompt": "So **{firstName}** was **{calculatedAge} years old** on April 1st, 2020. Is that correct?",
+          "expectedResponse": {
+            "type": "confirmation",
+            "yesPath": "PERSON_HISPANIC",
+            "noPath": "PERSON_DOB"
+          }
+        },
+        {
+          "promptId": "PERSON_HISPANIC",
+          "voicePrompt": "Is {firstName} of Hispanic, Latino, or Spanish origin?",
+          "chatPrompt": "Is **{firstName}** of Hispanic, Latino, or Spanish origin?",
+          "expectedResponse": {
+            "type": "confirmation",
+            "yesPath": "PERSON_HISPANIC_DETAIL",
+            "noPath": "PERSON_RACE"
+          }
+        },
+        {
+          "promptId": "PERSON_HISPANIC_DETAIL",
+          "voicePrompt": "Which best describes {firstName}'s Hispanic origin? For example, Mexican, Puerto Rican, Cuban, or another Hispanic origin?",
+          "chatPrompt": "Which best describes **{firstName}**'s Hispanic origin?\n- Mexican, Mexican American, Chicano\n- Puerto Rican\n- Cuban\n- Another Hispanic, Latino, or Spanish origin",
+          "expectedResponse": {
+            "type": "freeform",
+            "slotName": "hispanicOrigin",
+            "nextPrompt": "PERSON_RACE"
+          }
+        },
+        {
+          "promptId": "PERSON_RACE",
+          "voicePrompt": "What is {firstName}'s race? You may select more than one. The options are: White, Black or African American, American Indian or Alaska Native, Asian, Native Hawaiian or Pacific Islander, or some other race.",
+          "chatPrompt": "What is **{firstName}**'s race? (You may select more than one)\n\n- White\n- Black or African American\n- American Indian or Alaska Native\n- Asian\n- Native Hawaiian or Other Pacific Islander\n- Some other race",
+          "expectedResponse": {
+            "type": "multiSelect",
+            "slotName": "race",
+            "validValues": [
+              "White",
+              "Black or African American",
+              "American Indian or Alaska Native",
+              "Asian",
+              "Native Hawaiian or Other Pacific Islander",
+              "Some Other Race"
+            ],
+            "nextPrompt": "PERSON_RACE_DETAIL"
+          }
+        },
+        {
+          "promptId": "PERSON_RACE_DETAIL",
+          "voicePrompt": "Could you provide more detail about {firstName}'s racial background? For example, specific tribal affiliation, country of origin, or ethnicity?",
+          "chatPrompt": "Could you provide more detail about **{firstName}**'s racial background?\n\nFor example:\n- Tribal affiliation (Cherokee, Navajo, etc.)\n- Asian origin (Chinese, Filipino, Vietnamese, etc.)\n- Pacific Islander origin (Samoan, Chamorro, etc.)\n- Other specific ethnicity",
+          "optional": true,
+          "expectedResponse": {
+            "type": "freeform",
+            "slotName": "raceDetail",
+            "nextPrompt": "PERSON_COMPLETE"
+          }
+        },
+        {
+          "promptId": "PERSON_COMPLETE",
+          "voicePrompt": "Thank you. I've recorded the information for {firstName}.",
+          "chatPrompt": "Thank you. I've recorded the information for **{firstName}**.",
+          "expectedResponse": null,
+          "nextPrompt": "PERSON_NEXT_OR_HOUSING"
+        }
+      ]
+    },
+    {
+      "sectionId": "HOUSING",
+      "sectionName": "Housing Information",
+      "prompts": [
+        {
+          "promptId": "HOUSING_TENURE",
+          "voicePrompt": "Is this house, apartment, or mobile home owned or rented?",
+          "chatPrompt": "Is this house, apartment, or mobile home:\n- Owned with a mortgage or loan\n- Owned free and clear (no mortgage)\n- Rented\n- Occupied without payment of rent",
+          "expectedResponse": {
+            "type": "enum",
+            "slotName": "housingTenure",
+            "validValues": [
+              "Owned with mortgage or loan",
+              "Owned free and clear",
+              "Rented",
+              "Occupied without payment of rent"
+            ],
+            "nextPrompt": "HOUSING_PHONE"
+          }
+        },
+        {
+          "promptId": "HOUSING_PHONE",
+          "voicePrompt": "Finally, may I have a phone number where we can reach you if we have any follow-up questions?",
+          "chatPrompt": "Finally, may I have a phone number where we can reach you if we have any follow-up questions? (Optional)",
+          "optional": true,
+          "expectedResponse": {
+            "type": "phone",
+            "slotName": "contactPhone",
+            "nextPrompt": "COMPLETION_SUMMARY"
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "COMPLETION",
+      "sectionName": "Survey Completion",
+      "prompts": [
+        {
+          "promptId": "COMPLETION_SUMMARY",
+          "voicePrompt": "Thank you for completing the census survey! I've recorded information for {householdCount} people at your address. Your confirmation number is {confirmationNumber}. Please save this for your records.",
+          "chatPrompt": "**Thank you for completing the census survey!**\n\nI've recorded information for **{householdCount} people** at your address.\n\n📝 **Confirmation Number: {confirmationNumber}**\n\nPlease save this for your records.",
+          "expectedResponse": null,
+          "nextPrompt": "COMPLETION_CLOSING"
+        },
+        {
+          "promptId": "COMPLETION_CLOSING",
+          "voicePrompt": "Thank you for doing your civic duty and participating in the census. Your response helps ensure fair representation and funding for your community. Have a great day!",
+          "chatPrompt": "Thank you for doing your civic duty and participating in the census! Your response helps ensure fair representation and funding for your community.\n\nIf you have any questions, visit [census.gov](https://www.census.gov) or call 1-800-923-8282.\n\nHave a great day!",
+          "expectedResponse": null,
+          "nextPrompt": null
+        }
+      ]
+    },
+    {
+      "sectionId": "EXIT",
+      "sectionName": "Exit Paths",
+      "prompts": [
+        {
+          "promptId": "EXIT_REFUSED",
+          "voicePrompt": "I understand. If you change your mind, you can complete your census online at census.gov or call 1-800-923-8282. Thank you for your time.",
+          "chatPrompt": "I understand. If you change your mind, you can complete your census:\n- Online at [census.gov](https://www.census.gov)\n- By phone: 1-800-923-8282\n\nThank you for your time.",
+          "expectedResponse": null,
+          "nextPrompt": null
+        },
+        {
+          "promptId": "EXIT_NOT_RESIDENT",
+          "voicePrompt": "I understand. Unfortunately, I need to speak with an adult resident of this address to complete the survey. Is there another adult at this address I could speak with, or would you like me to call back at a different time?",
+          "chatPrompt": "I understand. Unfortunately, I need to speak with an adult resident of this address to complete the survey.\n\nWould you like me to:\n1. Connect with another adult at this address\n2. Schedule a callback at a different time",
+          "expectedResponse": {
+            "type": "enum",
+            "slotName": "exitChoice",
+            "validValues": ["Connect with another adult", "Schedule callback", "End conversation"],
+            "nextPrompt": null
+          }
+        },
+        {
+          "promptId": "EXIT_CALLBACK_SCHEDULE",
+          "voicePrompt": "When would be a good time for us to call back? Please provide a date and time that works for you.",
+          "chatPrompt": "When would be a good time for us to call back? Please provide a date and time that works for you.",
+          "expectedResponse": {
+            "type": "datetime",
+            "slotNames": ["callbackDate", "callbackTime"],
+            "nextPrompt": "EXIT_CALLBACK_CONFIRM"
+          }
+        },
+        {
+          "promptId": "EXIT_CALLBACK_CONFIRM",
+          "voicePrompt": "I've scheduled a callback for {callbackDate} at {callbackTime}. Is there a specific phone number you'd like us to use?",
+          "chatPrompt": "I've scheduled a callback for **{callbackDate}** at **{callbackTime}**.\n\nIs there a specific phone number you'd like us to use?",
+          "expectedResponse": {
+            "type": "phone",
+            "slotName": "callbackPhone",
+            "nextPrompt": "EXIT_CALLBACK_COMPLETE"
+          }
+        },
+        {
+          "promptId": "EXIT_CALLBACK_COMPLETE",
+          "voicePrompt": "Your callback has been scheduled. We'll contact you at {callbackPhone} on {callbackDate} at {callbackTime}. Thank you for your time.",
+          "chatPrompt": "Your callback has been scheduled:\n\n📅 **Date:** {callbackDate}\n⏰ **Time:** {callbackTime}\n📞 **Phone:** {callbackPhone}\n\nThank you for your time!",
+          "expectedResponse": null,
+          "nextPrompt": null
+        }
+      ]
+    }
+  ],
+  "errorHandling": {
+    "maxRetries": 3,
+    "retryPrompts": {
+      "notUnderstood": {
+        "voicePrompt": "I'm sorry, I didn't catch that. Could you please repeat your response?",
+        "chatPrompt": "I'm sorry, I didn't quite understand. Could you please rephrase your response?"
+      },
+      "invalidInput": {
+        "voicePrompt": "That doesn't seem to be a valid response. Let me ask again.",
+        "chatPrompt": "That doesn't seem to be a valid response. Let me ask again."
+      },
+      "timeout": {
+        "voicePrompt": "I didn't hear a response. Are you still there?",
+        "chatPrompt": "I haven't received a response. Are you still there?"
+      }
+    },
+    "escalationPrompt": {
+      "voicePrompt": "I'm having trouble processing your request. Let me transfer you to a live census representative who can assist you.",
+      "chatPrompt": "I'm having trouble processing your request. Let me connect you with a live census representative who can assist you."
+    }
+  },
+  "languageSupport": {
+    "default": "en-US",
+    "available": [
+      { "code": "en-US", "name": "English" },
+      { "code": "es-US", "name": "Spanish" },
+      { "code": "zh-CN", "name": "Chinese (Simplified)" },
+      { "code": "vi-VN", "name": "Vietnamese" },
+      { "code": "ko-KR", "name": "Korean" },
+      { "code": "tl-PH", "name": "Tagalog" },
+      { "code": "ru-RU", "name": "Russian" },
+      { "code": "ar-SA", "name": "Arabic" },
+      { "code": "ht-HT", "name": "Haitian Creole" },
+      { "code": "pt-BR", "name": "Portuguese" },
+      { "code": "pl-PL", "name": "Polish" },
+      { "code": "fr-FR", "name": "French" }
+    ],
+    "languageDetectionPrompt": {
+      "voicePrompt": "If you would like to continue in another language, please say the name of your preferred language now.",
+      "chatPrompt": "If you would like to continue in another language, please let me know your preferred language."
+    }
+  }
+}

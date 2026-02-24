@@ -1,0 +1,25 @@
+{
+  "_docs": {
+    "WHAT": "Amazon Lex V2 bot metadata and core settings",
+    "WHY": "Defines the bot's identity, session timeout, and service role for AWS permissions",
+    "HOW_TO_USE": "Import via AWS CLI: aws lexv2-models create-bot --cli-input-json file://bot-definition.json",
+    "REPLACE": "Change ACCOUNT_ID in roleArn to your AWS account number"
+  },
+  "name": "CensusEnumeratorBot",
+  "description": "Amazon Lex bot for conducting Census Enumerator surveys via voice and chat",
+  "dataPrivacy": {
+    "childDirected": false
+  },
+  "idleSessionTTLInSeconds": 300,
+  "roleArn": "arn:aws:iam::ACCOUNT_ID:role/aws-service-role/lexv2.amazonaws.com/AWSServiceRoleForLexV2Bots",
+  "botType": "Bot",
+  "botMembers": [],
+  "botTags": {
+    "Project": "CensusEnumeration",
+    "Environment": "Production",
+    "Department": "CensusBureau"
+  },
+  "testBotAliasTags": {
+    "Environment": "Test"
+  }
+}

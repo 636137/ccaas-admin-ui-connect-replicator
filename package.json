@@ -1,0 +1,30 @@
+{
+  "name": "ccaas-admin-ui",
+  "version": "1.0.0",
+  "description": "Admin UI for Government CCaaS in a Box configuration",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:ui\"",
+    "dev:ui": "npm run dev -w packages/ui",
+    "dev:api": "npm run dev -w packages/api",
+    "build": "npm run build -w packages/ui && npm run build -w packages/api",
+    "lint": "npm run lint -w packages/ui && npm run lint -w packages/api",
+    "test": "npm run test -w packages/ui && npm run test -w packages/api"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/636137/ccaas-admin-ui"
+  },
+  "author": "Chad Hendren",
+  "license": "MIT"
+}

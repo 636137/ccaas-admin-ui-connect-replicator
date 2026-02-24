@@ -1,0 +1,1028 @@
+{
+  "_docs": {
+    "WHAT": "Lex V2 intent definitions - what the bot can understand and respond to",
+    "WHY": "Each intent represents a user goal. Lex matches utterances to intents, extracts slot values, and triggers fulfillment code.",
+    "KEY_INTENTS": {
+      "WelcomeIntent": "Greeting and consent to proceed",
+      "VerifyAddressIntent": "Confirm or correct address on file",
+      "CollectHouseholdCountIntent": "Get number of people in household",
+      "CollectPersonInfoIntent": "Demographic info for each person",
+      "CollectHousingIntent": "Tenure status (own/rent)",
+      "ScheduleCallbackIntent": "Schedule follow-up call",
+      "EscalateIntent": "Transfer to human agent",
+      "FallbackIntent": "Catch-all for unrecognized input"
+    },
+    "HOW_UTTERANCES_WORK": "Lex uses these sample phrases to train NLU. Add more utterances for better recognition accuracy."
+  },
+  "intents": [
+    {
+      "_docs": "WELCOME: First intent triggered. Gets consent before proceeding with survey.",
+      "name": "WelcomeIntent",
+      "description": "Initial greeting and consent to proceed with census survey",
+      "sampleUtterances": [
+        { "utterance": "Hello" },
+        { "utterance": "Hi" },
+        { "utterance": "Start census" },
+        { "utterance": "Begin survey" },
+        { "utterance": "I want to complete my census" },
+        { "utterance": "Help me with census" },
+        { "utterance": "Census survey" },
+        { "utterance": "I'm calling about the census" },
+        { "utterance": "Start" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": true,
+        "postFulfillmentStatusSpecification": {
+          "successResponse": {
+            "messageGroups": [
+              {
+                "message": {
+                  "plainTextMessage": {
+                    "value": "Thank you for agreeing to participate. Let me verify your address on file."
+                  }
+                }
+              }
+            ],
+            "allowInterrupt": false
+          }
+        }
+      },
+      "initialResponseSetting": {
+        "initialResponse": {
+          "messageGroups": [
+            {
+              "message": {
+                "plainTextMessage": {
+                  "value": "Hello! Thank you for taking the time to speak with me today. I'm an automated assistant calling on behalf of the U.S. Census Bureau to help complete your household's census information. Your responses are protected by federal law under Title 13 and are kept strictly confidential. They will only be used for statistical purposes."
+                }
+              }
+            }
+          ],
+          "allowInterrupt": false
+        }
+      },
+      "slots": [
+        {
+          "name": "ConsentToProceed",
+          "slotTypeName": "YesNoType",
+          "description": "Whether the constituent consents to proceed with the survey",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "May I proceed with a few questions about your household?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 3,
+              "allowInterrupt": true
+            }
+          }
+        }
+      ],
+      "slotPriorities": [
+        { "priority": 1, "slotName": "ConsentToProceed" }
+      ]
+    },
+    {
+      "_docs": "VERIFY ADDRESS: Handles yes/no confirmation and address corrections",
+      "name": "VerifyAddressIntent",
+      "description": "Verify the constituent's address",
+      "sampleUtterances": [
+        { "utterance": "Yes that's correct" },
+        { "utterance": "That's my address" },
+        { "utterance": "Correct address" },
+        { "utterance": "Address is right" },
+        { "utterance": "No that's wrong" },
+        { "utterance": "Wrong address" },
+        { "utterance": "That's not my address" },
+        { "utterance": "I live at {StreetAddress}" },
+        { "utterance": "My address is {StreetAddress} {City} {State} {ZipCode}" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": true,
+        "postFulfillmentStatusSpecification": {
+          "successResponse": {
+            "messageGroups": [
+              {
+                "message": {
+                  "plainTextMessage": {
+                    "value": "Thank you for confirming your address. Now let's continue with the survey."
+                  }
+                }
+              }
+            ],
+            "allowInterrupt": false
+          }
+        }
+      },
+      "slots": [
+        {
+          "name": "AddressConfirmation",
+          "slotTypeName": "YesNoType",
+          "description": "Whether the address on file is correct",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "I have your address on file. Is this address correct?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "StreetAddress",
+          "slotTypeName": "AMAZON.StreetAddress",
+          "description": "Street address if correction needed",
+          "valueElicitationSetting": {
+            "slotConstraint": "Optional",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What is your correct street address?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "City",
+          "slotTypeName": "AMAZON.City",
+          "description": "City name",
+          "valueElicitationSetting": {
+            "slotConstraint": "Optional",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What city do you live in?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "State",
+          "slotTypeName": "AMAZON.US_STATE",
+          "description": "State",
+          "valueElicitationSetting": {
+            "slotConstraint": "Optional",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What state?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "ZipCode",
+          "slotTypeName": "AMAZON.Number",
+          "description": "ZIP code",
+          "valueElicitationSetting": {
+            "slotConstraint": "Optional",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "And what is your ZIP code?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "IsAdultResident",
+          "slotTypeName": "YesNoType",
+          "description": "Confirm speaker is an adult resident",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "Are you an adult resident, 18 years or older, currently living at this address?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        }
+      ],
+      "slotPriorities": [
+        { "priority": 1, "slotName": "AddressConfirmation" },
+        { "priority": 2, "slotName": "StreetAddress" },
+        { "priority": 3, "slotName": "City" },
+        { "priority": 4, "slotName": "State" },
+        { "priority": 5, "slotName": "ZipCode" },
+        { "priority": 6, "slotName": "IsAdultResident" }
+      ]
+    },
+    {
+      "name": "HouseholdCountIntent",
+      "description": "Collect the total number of people in the household",
+      "sampleUtterances": [
+        { "utterance": "{HouseholdCount} people" },
+        { "utterance": "There are {HouseholdCount} of us" },
+        { "utterance": "{HouseholdCount}" },
+        { "utterance": "We have {HouseholdCount} people living here" },
+        { "utterance": "Just me" },
+        { "utterance": "Only myself" },
+        { "utterance": "Two of us" },
+        { "utterance": "My family of {HouseholdCount}" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": true,
+        "postFulfillmentStatusSpecification": {
+          "successResponse": {
+            "messageGroups": [
+              {
+                "message": {
+                  "plainTextMessage": {
+                    "value": "Thank you. Now I'll collect some information about each person in your household."
+                  }
+                }
+              }
+            ],
+            "allowInterrupt": false
+          }
+        }
+      },
+      "initialResponseSetting": {
+        "initialResponse": {
+          "messageGroups": [
+            {
+              "message": {
+                "plainTextMessage": {
+                  "value": "Now I need to know how many people live at your address."
+                }
+              }
+            }
+          ],
+          "allowInterrupt": false
+        }
+      },
+      "slots": [
+        {
+          "name": "HouseholdCount",
+          "slotTypeName": "AMAZON.Number",
+          "description": "Total number of people in household",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "As of April 1st, how many people were living or staying at this address? Please include everyone - family members, roommates, foster children, and anyone else staying there."
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 3,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "CountConfirmation",
+          "slotTypeName": "YesNoType",
+          "description": "Confirm the household count",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "Just to confirm, there were {HouseholdCount} people living at this address. Is that correct?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        }
+      ],
+      "slotPriorities": [
+        { "priority": 1, "slotName": "HouseholdCount" },
+        { "priority": 2, "slotName": "CountConfirmation" }
+      ]
+    },
+    {
+      "name": "CollectPersonInfoIntent",
+      "description": "Collect demographic information for each household member",
+      "sampleUtterances": [
+        { "utterance": "My name is {FirstName} {LastName}" },
+        { "utterance": "{FirstName} {LastName}" },
+        { "utterance": "The first person is {FirstName}" },
+        { "utterance": "{Relationship}" },
+        { "utterance": "They are my {Relationship}" },
+        { "utterance": "{Sex}" },
+        { "utterance": "Born on {DateOfBirth}" },
+        { "utterance": "{Age} years old" },
+        { "utterance": "Yes Hispanic" },
+        { "utterance": "No not Hispanic" },
+        { "utterance": "{Race}" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": true,
+        "postFulfillmentStatusSpecification": {
+          "successResponse": {
+            "messageGroups": [
+              {
+                "message": {
+                  "plainTextMessage": {
+                    "value": "Thank you. I've recorded the information for this person."
+                  }
+                }
+              }
+            ],
+            "allowInterrupt": false
+          }
+        }
+      },
+      "slots": [
+        {
+          "name": "FirstName",
+          "slotTypeName": "AMAZON.FirstName",
+          "description": "Person's first name",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What is this person's first name?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 3,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "LastName",
+          "slotTypeName": "AMAZON.LastName",
+          "description": "Person's last name",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "And what is {FirstName}'s last name?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 3,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "Relationship",
+          "slotTypeName": "RelationshipType",
+          "description": "Relationship to Person 1",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What is {FirstName}'s relationship to the first person listed? For example, spouse, child, parent, sibling, or roommate?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 3,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "Sex",
+          "slotTypeName": "SexType",
+          "description": "Person's sex",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What is {FirstName}'s sex? Male or female?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "DateOfBirth",
+          "slotTypeName": "AMAZON.Date",
+          "description": "Date of birth",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What is {FirstName}'s date of birth? Please provide the month, day, and year."
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 3,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "Age",
+          "slotTypeName": "AMAZON.Number",
+          "description": "Age in years",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "How old was {FirstName} on April 1st?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "IsHispanicLatino",
+          "slotTypeName": "YesNoType",
+          "description": "Hispanic/Latino origin indicator",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "Is {FirstName} of Hispanic, Latino, or Spanish origin?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "HispanicOrigin",
+          "slotTypeName": "HispanicOriginType",
+          "description": "Specific Hispanic origin",
+          "valueElicitationSetting": {
+            "slotConstraint": "Optional",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "Which best describes {FirstName}'s Hispanic origin? For example, Mexican, Puerto Rican, Cuban, or another Hispanic origin?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "Race",
+          "slotTypeName": "RaceType",
+          "description": "Race category",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What is {FirstName}'s race? The options are: White, Black or African American, American Indian or Alaska Native, Asian, Native Hawaiian or Pacific Islander, or some other race. You may select more than one."
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 3,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "RaceDetail",
+          "slotTypeName": "AMAZON.FreeFormInput",
+          "description": "Specific race detail (tribe, country, etc.)",
+          "valueElicitationSetting": {
+            "slotConstraint": "Optional",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "Could you provide more detail about {FirstName}'s racial background? For example, specific tribal affiliation or country of origin? You can say skip if you prefer not to answer."
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 1,
+              "allowInterrupt": true
+            }
+          }
+        }
+      ],
+      "slotPriorities": [
+        { "priority": 1, "slotName": "FirstName" },
+        { "priority": 2, "slotName": "LastName" },
+        { "priority": 3, "slotName": "Relationship" },
+        { "priority": 4, "slotName": "Sex" },
+        { "priority": 5, "slotName": "DateOfBirth" },
+        { "priority": 6, "slotName": "Age" },
+        { "priority": 7, "slotName": "IsHispanicLatino" },
+        { "priority": 8, "slotName": "HispanicOrigin" },
+        { "priority": 9, "slotName": "Race" },
+        { "priority": 10, "slotName": "RaceDetail" }
+      ]
+    },
+    {
+      "name": "HousingInfoIntent",
+      "description": "Collect housing tenure information",
+      "sampleUtterances": [
+        { "utterance": "We own our home" },
+        { "utterance": "We rent" },
+        { "utterance": "I'm renting" },
+        { "utterance": "Own with mortgage" },
+        { "utterance": "Own free and clear" },
+        { "utterance": "{HousingTenure}" },
+        { "utterance": "My phone number is {PhoneNumber}" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": true,
+        "postFulfillmentStatusSpecification": {
+          "successResponse": {
+            "messageGroups": [
+              {
+                "message": {
+                  "plainTextMessage": {
+                    "value": "Thank you for providing your housing information."
+                  }
+                }
+              }
+            ],
+            "allowInterrupt": false
+          }
+        }
+      },
+      "slots": [
+        {
+          "name": "HousingTenure",
+          "slotTypeName": "HousingTenureType",
+          "description": "Housing ownership status",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "Is your home owned with a mortgage, owned free and clear, rented, or occupied without payment of rent?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 3,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "PhoneNumber",
+          "slotTypeName": "AMAZON.PhoneNumber",
+          "description": "Contact phone number for follow-up",
+          "valueElicitationSetting": {
+            "slotConstraint": "Optional",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "Finally, may I have a phone number where we can reach you if we have any follow-up questions? This is optional."
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        }
+      ],
+      "slotPriorities": [
+        { "priority": 1, "slotName": "HousingTenure" },
+        { "priority": 2, "slotName": "PhoneNumber" }
+      ]
+    },
+    {
+      "name": "CompleteSurveyIntent",
+      "description": "Complete the census survey and provide confirmation",
+      "sampleUtterances": [
+        { "utterance": "That's everyone" },
+        { "utterance": "We're done" },
+        { "utterance": "Finish survey" },
+        { "utterance": "Complete" },
+        { "utterance": "All done" },
+        { "utterance": "No more people" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": true,
+        "postFulfillmentStatusSpecification": {
+          "successResponse": {
+            "messageGroups": [
+              {
+                "message": {
+                  "plainTextMessage": {
+                    "value": "Thank you for completing the census survey! Your response helps ensure fair representation and funding for your community. Have a great day!"
+                  }
+                }
+              }
+            ],
+            "allowInterrupt": false
+          }
+        }
+      },
+      "closingSetting": {
+        "closingResponse": {
+          "messageGroups": [
+            {
+              "message": {
+                "plainTextMessage": {
+                  "value": "Thank you for doing your civic duty and participating in the census. Goodbye!"
+                }
+              }
+            }
+          ],
+          "allowInterrupt": false
+        }
+      }
+    },
+    {
+      "name": "ScheduleCallbackIntent",
+      "description": "Schedule a callback for later completion",
+      "sampleUtterances": [
+        { "utterance": "Call me back" },
+        { "utterance": "Can you call later" },
+        { "utterance": "Schedule a callback" },
+        { "utterance": "I'm busy right now" },
+        { "utterance": "Call me tomorrow" },
+        { "utterance": "Not a good time" },
+        { "utterance": "Call back at {CallbackTime}" },
+        { "utterance": "Call me on {CallbackDate}" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": true,
+        "postFulfillmentStatusSpecification": {
+          "successResponse": {
+            "messageGroups": [
+              {
+                "message": {
+                  "plainTextMessage": {
+                    "value": "Your callback has been scheduled. We'll contact you at the requested time. Thank you!"
+                  }
+                }
+              }
+            ],
+            "allowInterrupt": false
+          }
+        }
+      },
+      "slots": [
+        {
+          "name": "CallbackDate",
+          "slotTypeName": "AMAZON.Date",
+          "description": "Preferred callback date",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What date would you like us to call you back?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "CallbackTime",
+          "slotTypeName": "AMAZON.Time",
+          "description": "Preferred callback time",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What time would be best to call you?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        },
+        {
+          "name": "CallbackPhone",
+          "slotTypeName": "AMAZON.PhoneNumber",
+          "description": "Phone number for callback",
+          "valueElicitationSetting": {
+            "slotConstraint": "Required",
+            "promptSpecification": {
+              "messageGroups": [
+                {
+                  "message": {
+                    "plainTextMessage": {
+                      "value": "What phone number should we use to call you back?"
+                    }
+                  }
+                }
+              ],
+              "maxRetries": 2,
+              "allowInterrupt": true
+            }
+          }
+        }
+      ],
+      "slotPriorities": [
+        { "priority": 1, "slotName": "CallbackDate" },
+        { "priority": 2, "slotName": "CallbackTime" },
+        { "priority": 3, "slotName": "CallbackPhone" }
+      ]
+    },
+    {
+      "name": "SpeakToAgentIntent",
+      "description": "Request to speak with a live census enumerator",
+      "sampleUtterances": [
+        { "utterance": "Speak to a person" },
+        { "utterance": "Talk to someone" },
+        { "utterance": "Human please" },
+        { "utterance": "Live agent" },
+        { "utterance": "I want to talk to a human" },
+        { "utterance": "Transfer me" },
+        { "utterance": "Get me a representative" },
+        { "utterance": "Agent" },
+        { "utterance": "Operator" },
+        { "utterance": "Real person" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": true,
+        "postFulfillmentStatusSpecification": {
+          "successResponse": {
+            "messageGroups": [
+              {
+                "message": {
+                  "plainTextMessage": {
+                    "value": "I understand you'd like to speak with a census representative. Let me transfer you now. Please hold."
+                  }
+                }
+              }
+            ],
+            "allowInterrupt": false
+          }
+        }
+      }
+    },
+    {
+      "name": "RefuseSurveyIntent",
+      "description": "Handle survey refusal",
+      "sampleUtterances": [
+        { "utterance": "I don't want to do this" },
+        { "utterance": "No thank you" },
+        { "utterance": "I refuse" },
+        { "utterance": "Not interested" },
+        { "utterance": "Stop calling me" },
+        { "utterance": "Remove me from your list" },
+        { "utterance": "I'm not participating" },
+        { "utterance": "Leave me alone" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": true,
+        "postFulfillmentStatusSpecification": {
+          "successResponse": {
+            "messageGroups": [
+              {
+                "message": {
+                  "plainTextMessage": {
+                    "value": "I understand. If you change your mind, you can complete your census online at census.gov or call 1-800-923-8282. Thank you for your time."
+                  }
+                }
+              }
+            ],
+            "allowInterrupt": false
+          }
+        }
+      },
+      "closingSetting": {
+        "closingResponse": {
+          "messageGroups": [
+            {
+              "message": {
+                "plainTextMessage": {
+                  "value": "Goodbye."
+                }
+              }
+            }
+          ],
+          "allowInterrupt": false
+        }
+      }
+    },
+    {
+      "name": "PrivacyConcernIntent",
+      "description": "Address privacy and confidentiality concerns",
+      "sampleUtterances": [
+        { "utterance": "Is this confidential" },
+        { "utterance": "Who sees this information" },
+        { "utterance": "Is my data safe" },
+        { "utterance": "Will this be shared" },
+        { "utterance": "Privacy concerns" },
+        { "utterance": "What happens to my information" },
+        { "utterance": "Why do you need this" },
+        { "utterance": "I'm worried about my privacy" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": false
+      },
+      "closingSetting": {
+        "closingResponse": {
+          "messageGroups": [
+            {
+              "message": {
+                "plainTextMessage": {
+                  "value": "I understand your concern about privacy. Your census responses are protected by Title 13 of the U.S. Code. This means your information is kept strictly confidential, cannot be shared with any other government agency including immigration or law enforcement, and can only be used for statistical purposes. Census Bureau employees are sworn for life to protect your data, and there are severe penalties for any violations. Would you like to continue with the survey?"
+                }
+              }
+            }
+          ],
+          "allowInterrupt": true
+        }
+      }
+    },
+    {
+      "name": "HelpIntent",
+      "description": "Provide help and guidance",
+      "sampleUtterances": [
+        { "utterance": "Help" },
+        { "utterance": "I need help" },
+        { "utterance": "What should I say" },
+        { "utterance": "I don't understand" },
+        { "utterance": "Can you explain" },
+        { "utterance": "What do you mean" },
+        { "utterance": "I'm confused" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": false
+      },
+      "closingSetting": {
+        "closingResponse": {
+          "messageGroups": [
+            {
+              "message": {
+                "plainTextMessage": {
+                  "value": "I'm here to help you complete your census survey. I'll ask you questions about how many people live at your address and collect some basic information about each person, including their name, age, and race. Your responses are confidential and protected by law. Just answer each question as best you can, and let me know if you need me to repeat anything."
+                }
+              }
+            }
+          ],
+          "allowInterrupt": true
+        }
+      }
+    },
+    {
+      "name": "RepeatIntent",
+      "description": "Repeat the last question or statement",
+      "sampleUtterances": [
+        { "utterance": "Repeat that" },
+        { "utterance": "Say that again" },
+        { "utterance": "What did you say" },
+        { "utterance": "Can you repeat" },
+        { "utterance": "I didn't hear that" },
+        { "utterance": "One more time" },
+        { "utterance": "Pardon" },
+        { "utterance": "Sorry what" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": false
+      }
+    },
+    {
+      "name": "SkipQuestionIntent",
+      "description": "Skip an optional question",
+      "sampleUtterances": [
+        { "utterance": "Skip" },
+        { "utterance": "Skip this question" },
+        { "utterance": "I don't want to answer" },
+        { "utterance": "Pass" },
+        { "utterance": "Next question" },
+        { "utterance": "Move on" },
+        { "utterance": "I'd rather not say" }
+      ],
+      "fulfillmentCodeHook": {
+        "enabled": false
+      }
+    },
+    {
+      "name": "FallbackIntent",
+      "description": "Handle unrecognized utterances",
+      "parentIntentSignature": "AMAZON.FallbackIntent",
+      "fulfillmentCodeHook": {
+        "enabled": true
+      },
+      "closingSetting": {
+        "closingResponse": {
+          "messageGroups": [
+            {
+              "message": {
+                "plainTextMessage": {
+                  "value": "I'm sorry, I didn't quite catch that. Could you please rephrase your response? You can also say 'help' for assistance or 'speak to agent' to talk to a census representative."
+                }
+              }
+            }
+          ],
+          "allowInterrupt": true
+        }
+      }
+    }
+  ]
+}

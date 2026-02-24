@@ -1,0 +1,108 @@
+# Census Enumerator AI Agent - Terraform Configuration Example
+# Copy this file to terraform.tfvars and update values
+
+# AWS Configuration
+aws_region  = "us-east-1"
+environment = "dev"  # Options: dev, staging, prod
+
+# Project Information
+project_name = "census-enumerator"
+owner        = "census-bureau"
+
+# Bedrock Configuration
+bedrock_model_id = "anthropic.claude-sonnet-4-5-20250929-v1:0"
+
+# Lex Configuration
+lex_voice_id                 = "Ruth"  # Using Ruth with generative engine
+lex_locale                   = "en_US"
+lex_nlu_confidence_threshold = 0.40
+
+# Lambda Configuration
+lambda_runtime     = "nodejs18.x"
+lambda_timeout     = 30
+lambda_memory_size = 256
+
+# DynamoDB Configuration
+dynamodb_billing_mode                  = "PAY_PER_REQUEST"
+dynamodb_enable_encryption             = true
+dynamodb_enable_point_in_time_recovery = true
+
+# Amazon Connect (optional - leave empty to skip)
+connect_instance_id       = ""  # Your existing Connect instance ID
+connect_contact_flow_name = "CensusEnumeratorFlow"
+
+# Monitoring Configuration
+alarm_sns_topic_arn        = ""  # SNS topic ARN for alarms (optional)
+enable_detailed_monitoring = true
+log_retention_days         = 90
+
+# Security Configuration
+enable_kms_encryption = true
+kms_key_arn           = ""  # Leave empty to create new KMS key
+
+# VPC Configuration (optional)
+vpc_id                 = ""
+vpc_subnet_ids         = []
+vpc_security_group_ids = []
+# =============================================================================
+# FEDRAMP COMPLIANCE - Government CCaaS in a Box
+# =============================================================================
+# Set enable_fedramp_compliance = true to deploy all FedRAMP controls
+# This creates: KMS keys, CloudTrail, VPC, WAF, Config Rules, Backup
+
+enable_fedramp_compliance = true
+
+# Security Contact (receives all security alerts)
+security_contact_email = "security@agency.gov"
+
+# KMS Key Administrators (IAM ARNs allowed to manage encryption keys)
+kms_key_administrators = [
+  # "arn:aws:iam::ACCOUNT_ID:role/SecurityAdmin"
+]
+
+# Audit Log Retention (minimum 90 days for FedRAMP)
+audit_log_retention_days = 365
+
+# VPC Configuration (required when deploy_in_vpc = true)
+deploy_in_vpc              = true
+vpc_cidr                   = "10.0.0.0/16"
+availability_zones         = ["us-east-1a", "us-east-1b", "us-east-1c"]
+enable_nat_gateway         = true
+single_nat_gateway         = false  # true for cost savings, false for HA
+enable_vpc_endpoints       = true   # PrivateLink endpoints for AWS services
+
+# WAF Configuration
+enable_waf            = true
+waf_rate_limit        = 2000   # Requests per 5 minutes per IP
+waf_geo_restriction   = true   # Restrict to US only
+waf_allowed_countries = ["US"]
+
+# Backup/Disaster Recovery Configuration
+enable_backup              = true
+enable_cross_region_backup = false  # Set to true and provide dr_vault_arn
+dr_vault_arn               = ""     # ARN of backup vault in DR region (create separately)
+backup_admin_role_arns     = [
+  # "arn:aws:iam::ACCOUNT_ID:role/BackupAdmin"
+]
+
+# SNS Topics for Security Notifications
+security_notification_arns = []  # Add SNS topic ARNs for security alerts
+
+# =============================================================================
+# AMAZON CONNECT INSTANCE (NEW)
+# =============================================================================
+# Set create_connect_instance = true to create a new Connect instance
+# Set to false to use existing instance (specify connect_instance_id above)
+
+create_connect_instance = true
+connect_instance_alias  = "census-enumerator"  # Must be globally unique
+
+# Test Users
+agent_emails = [
+  "census.agent1@example.com",
+  "census.agent2@example.com",
+  "census.agent3@example.com",
+  "census.agent4@example.com",
+  "census.agent5@example.com"
+]
+supervisor_email = "census.supervisor@example.com"

@@ -1,0 +1,45 @@
+{
+  "_docs": {
+    "WHAT": "English (US) locale settings for the Lex bot",
+    "WHY": "Defines language, voice, and AI enhancement settings for this locale",
+    "KEY_SETTINGS": {
+      "voiceId": "Ruth - AWS Polly voice used for text-to-speech",
+      "engine": "generative - most natural-sounding, uses neural TTS",
+      "nluIntentConfidenceThreshold": "0.40 - minimum confidence to match an intent (lower = more lenient)"
+    },
+    "GENERATIVE_AI": "Enables Bedrock-powered improvements for slot resolution and utterance generation",
+    "HOW_TO_CHANGE_VOICE": "Options include Joanna, Matthew, Ivy, Kendra, etc. 'generative' engine only works with select voices."
+  },
+  "localeId": "en_US",
+  "description": "English (US) locale for Census Enumerator Bot",
+  "nluIntentConfidenceThreshold": 0.40,
+  "voiceSettings": {
+    "voiceId": "Ruth",
+    "engine": "generative"
+  },
+  "generativeAISettings": {
+    "_docs": "Uses Claude to improve slot filling accuracy and auto-generate training utterances",
+    "runtimeSettings": {
+      "slotResolutionImprovement": {
+        "enabled": true,
+        "bedrockModelSpecification": {
+          "modelArn": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"
+        }
+      }
+    },
+    "buildtimeSettings": {
+      "descriptiveBotBuilder": {
+        "enabled": true,
+        "bedrockModelSpecification": {
+          "modelArn": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"
+        }
+      },
+      "sampleUtteranceGeneration": {
+        "enabled": true,
+        "bedrockModelSpecification": {
+          "modelArn": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"
+        }
+      }
+    }
+  }
+}

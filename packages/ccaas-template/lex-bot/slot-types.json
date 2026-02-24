@@ -1,0 +1,134 @@
+{
+  "slotTypes": [
+    {
+      "name": "RelationshipType",
+      "description": "Relationship to the householder (Person 1)",
+      "slotTypeValues": [
+        { "sampleValue": { "value": "Self" }, "synonyms": [{ "value": "myself" }, { "value": "me" }, { "value": "householder" }, { "value": "head of household" }] },
+        { "sampleValue": { "value": "Spouse" }, "synonyms": [{ "value": "husband" }, { "value": "wife" }, { "value": "partner" }, { "value": "married" }] },
+        { "sampleValue": { "value": "Biological Child" }, "synonyms": [{ "value": "son" }, { "value": "daughter" }, { "value": "child" }, { "value": "my kid" }] },
+        { "sampleValue": { "value": "Adopted Child" }, "synonyms": [{ "value": "adopted son" }, { "value": "adopted daughter" }] },
+        { "sampleValue": { "value": "Stepchild" }, "synonyms": [{ "value": "stepson" }, { "value": "stepdaughter" }, { "value": "step child" }] },
+        { "sampleValue": { "value": "Parent" }, "synonyms": [{ "value": "mother" }, { "value": "father" }, { "value": "mom" }, { "value": "dad" }] },
+        { "sampleValue": { "value": "Sibling" }, "synonyms": [{ "value": "brother" }, { "value": "sister" }, { "value": "sibling" }] },
+        { "sampleValue": { "value": "Grandchild" }, "synonyms": [{ "value": "grandson" }, { "value": "granddaughter" }] },
+        { "sampleValue": { "value": "Grandparent" }, "synonyms": [{ "value": "grandmother" }, { "value": "grandfather" }, { "value": "grandma" }, { "value": "grandpa" }] },
+        { "sampleValue": { "value": "In-law" }, "synonyms": [{ "value": "mother-in-law" }, { "value": "father-in-law" }, { "value": "son-in-law" }, { "value": "daughter-in-law" }] },
+        { "sampleValue": { "value": "Other Relative" }, "synonyms": [{ "value": "cousin" }, { "value": "aunt" }, { "value": "uncle" }, { "value": "niece" }, { "value": "nephew" }] },
+        { "sampleValue": { "value": "Roommate" }, "synonyms": [{ "value": "housemate" }, { "value": "room mate" }, { "value": "flatmate" }] },
+        { "sampleValue": { "value": "Foster Child" }, "synonyms": [{ "value": "foster son" }, { "value": "foster daughter" }] },
+        { "sampleValue": { "value": "Other Non-relative" }, "synonyms": [{ "value": "friend" }, { "value": "boarder" }, { "value": "tenant" }] }
+      ],
+      "valueSelectionSetting": {
+        "resolutionStrategy": "TOP_RESOLUTION",
+        "advancedRecognitionSetting": {
+          "audioRecognitionStrategy": "UseSlotValuesAsCustomVocabulary"
+        }
+      }
+    },
+    {
+      "name": "SexType",
+      "description": "Biological sex",
+      "slotTypeValues": [
+        { "sampleValue": { "value": "Male" }, "synonyms": [{ "value": "man" }, { "value": "boy" }, { "value": "M" }, { "value": "guy" }] },
+        { "sampleValue": { "value": "Female" }, "synonyms": [{ "value": "woman" }, { "value": "girl" }, { "value": "F" }, { "value": "lady" }] }
+      ],
+      "valueSelectionSetting": {
+        "resolutionStrategy": "TOP_RESOLUTION",
+        "advancedRecognitionSetting": {
+          "audioRecognitionStrategy": "UseSlotValuesAsCustomVocabulary"
+        }
+      }
+    },
+    {
+      "name": "RaceType",
+      "description": "Race categories for census",
+      "slotTypeValues": [
+        { "sampleValue": { "value": "White" }, "synonyms": [{ "value": "Caucasian" }, { "value": "European" }] },
+        { "sampleValue": { "value": "Black or African American" }, "synonyms": [{ "value": "Black" }, { "value": "African American" }, { "value": "African" }] },
+        { "sampleValue": { "value": "American Indian or Alaska Native" }, "synonyms": [{ "value": "Native American" }, { "value": "American Indian" }, { "value": "Alaska Native" }, { "value": "Indigenous" }] },
+        { "sampleValue": { "value": "Asian" }, "synonyms": [{ "value": "Asian American" }, { "value": "Chinese" }, { "value": "Japanese" }, { "value": "Korean" }, { "value": "Vietnamese" }, { "value": "Filipino" }, { "value": "Indian" }] },
+        { "sampleValue": { "value": "Native Hawaiian or Pacific Islander" }, "synonyms": [{ "value": "Hawaiian" }, { "value": "Pacific Islander" }, { "value": "Samoan" }, { "value": "Guamanian" }, { "value": "Chamorro" }] },
+        { "sampleValue": { "value": "Some Other Race" }, "synonyms": [{ "value": "other" }, { "value": "mixed" }, { "value": "multiracial" }, { "value": "two or more" }] }
+      ],
+      "valueSelectionSetting": {
+        "resolutionStrategy": "TOP_RESOLUTION",
+        "advancedRecognitionSetting": {
+          "audioRecognitionStrategy": "UseSlotValuesAsCustomVocabulary"
+        }
+      }
+    },
+    {
+      "name": "HispanicOriginType",
+      "description": "Hispanic, Latino, or Spanish origin categories",
+      "slotTypeValues": [
+        { "sampleValue": { "value": "Mexican" }, "synonyms": [{ "value": "Mexican American" }, { "value": "Chicano" }] },
+        { "sampleValue": { "value": "Puerto Rican" }, "synonyms": [{ "value": "Boricua" }] },
+        { "sampleValue": { "value": "Cuban" }, "synonyms": [{ "value": "Cuban American" }] },
+        { "sampleValue": { "value": "Dominican" }, "synonyms": [{ "value": "Dominican Republic" }] },
+        { "sampleValue": { "value": "Central American" }, "synonyms": [{ "value": "Guatemalan" }, { "value": "Salvadoran" }, { "value": "Honduran" }, { "value": "Nicaraguan" }] },
+        { "sampleValue": { "value": "South American" }, "synonyms": [{ "value": "Colombian" }, { "value": "Peruvian" }, { "value": "Venezuelan" }, { "value": "Argentinian" }, { "value": "Chilean" }] },
+        { "sampleValue": { "value": "Spanish" }, "synonyms": [{ "value": "Spaniard" }, { "value": "from Spain" }] },
+        { "sampleValue": { "value": "Other Hispanic" }, "synonyms": [{ "value": "Latino" }, { "value": "Latina" }, { "value": "Hispanic" }] }
+      ],
+      "valueSelectionSetting": {
+        "resolutionStrategy": "TOP_RESOLUTION",
+        "advancedRecognitionSetting": {
+          "audioRecognitionStrategy": "UseSlotValuesAsCustomVocabulary"
+        }
+      }
+    },
+    {
+      "name": "HousingTenureType",
+      "description": "Housing ownership status",
+      "slotTypeValues": [
+        { "sampleValue": { "value": "Owned with mortgage" }, "synonyms": [{ "value": "own with mortgage" }, { "value": "paying mortgage" }, { "value": "have a mortgage" }, { "value": "mortgaged" }] },
+        { "sampleValue": { "value": "Owned free and clear" }, "synonyms": [{ "value": "own outright" }, { "value": "paid off" }, { "value": "no mortgage" }, { "value": "own free and clear" }] },
+        { "sampleValue": { "value": "Rented" }, "synonyms": [{ "value": "rent" }, { "value": "renting" }, { "value": "tenant" }, { "value": "leasing" }] },
+        { "sampleValue": { "value": "Occupied without payment" }, "synonyms": [{ "value": "no rent" }, { "value": "live rent free" }, { "value": "no payment" }, { "value": "free housing" }] }
+      ],
+      "valueSelectionSetting": {
+        "resolutionStrategy": "TOP_RESOLUTION",
+        "advancedRecognitionSetting": {
+          "audioRecognitionStrategy": "UseSlotValuesAsCustomVocabulary"
+        }
+      }
+    },
+    {
+      "name": "YesNoType",
+      "description": "Yes or No confirmation responses",
+      "slotTypeValues": [
+        { "sampleValue": { "value": "Yes" }, "synonyms": [{ "value": "yeah" }, { "value": "yep" }, { "value": "correct" }, { "value": "right" }, { "value": "affirmative" }, { "value": "that's right" }, { "value": "sure" }, { "value": "uh huh" }, { "value": "yes please" }] },
+        { "sampleValue": { "value": "No" }, "synonyms": [{ "value": "nope" }, { "value": "nah" }, { "value": "negative" }, { "value": "incorrect" }, { "value": "wrong" }, { "value": "that's wrong" }, { "value": "not correct" }] }
+      ],
+      "valueSelectionSetting": {
+        "resolutionStrategy": "TOP_RESOLUTION",
+        "advancedRecognitionSetting": {
+          "audioRecognitionStrategy": "UseSlotValuesAsCustomVocabulary"
+        }
+      }
+    },
+    {
+      "name": "HouseholdCountType",
+      "description": "Number of people in household",
+      "slotTypeValues": [
+        { "sampleValue": { "value": "1" }, "synonyms": [{ "value": "one" }, { "value": "just me" }, { "value": "only me" }, { "value": "myself" }] },
+        { "sampleValue": { "value": "2" }, "synonyms": [{ "value": "two" }, { "value": "a couple" }, { "value": "two of us" }] },
+        { "sampleValue": { "value": "3" }, "synonyms": [{ "value": "three" }] },
+        { "sampleValue": { "value": "4" }, "synonyms": [{ "value": "four" }] },
+        { "sampleValue": { "value": "5" }, "synonyms": [{ "value": "five" }] },
+        { "sampleValue": { "value": "6" }, "synonyms": [{ "value": "six" }] },
+        { "sampleValue": { "value": "7" }, "synonyms": [{ "value": "seven" }] },
+        { "sampleValue": { "value": "8" }, "synonyms": [{ "value": "eight" }] },
+        { "sampleValue": { "value": "9" }, "synonyms": [{ "value": "nine" }] },
+        { "sampleValue": { "value": "10" }, "synonyms": [{ "value": "ten" }] }
+      ],
+      "valueSelectionSetting": {
+        "resolutionStrategy": "TOP_RESOLUTION",
+        "advancedRecognitionSetting": {
+          "audioRecognitionStrategy": "UseSlotValuesAsCustomVocabulary"
+        }
+      }
+    }
+  ]
+}

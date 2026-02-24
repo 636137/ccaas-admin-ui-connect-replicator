@@ -1,0 +1,353 @@
+{
+  "_fileDescription": "WHAT: Amazon Bedrock Agent configuration schema. WHY: Defines the AI agent's available actions, guardrails, and integration settings. HOW: Import into Bedrock Agent setup or use as reference for API calls.",
+  "_architecture": "This uses the Bedrock Agents pattern: Connect → Lex → Bedrock Agent → Lambda. See agent-configuration-connect.json for the simpler Connect-native alternative.",
+  
+  "agentName": "CensusEnumeratorAgent",
+  "description": "AI Agent for conducting Census Enumerator surveys via voice and chat in Amazon Connect",
+  "version": "1.0.0",
+  "channels": ["VOICE", "CHAT"],
+  
+  "agentConfiguration": {
+    "_docs": "Core agent settings: timeout, base instructions, and which AI model to use",
+    "idleSessionTTLInSeconds": 300,
+    "instruction": "You are a Census Enumerator AI assistant. Your goal is to collect accurate household census information while maintaining a friendly, professional demeanor. Always verify the address and resident status before proceeding. Collect information for each household member systematically. Emphasize confidentiality and the importance of census participation.",
+    "foundationModel": "anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "promptOverrideConfiguration": {
+      "overrideLambda": null,
+      "promptConfigurations": []
+    }
+  },
+
+  "actionGroups": [
+    {
+      "_docs": "Action groups define WHAT the agent can DO. Each action maps to a Lambda function call. The agent decides when to call these based on conversation context.",
+      "actionGroupName": "CensusSurveyActions",
+      "description": "Actions for conducting census survey",
+      "actions": [
+        {
+          "_docs": "Called when constituent confirms or corrects their address",
+          "actionName": "VerifyAddress",
+          "description": "Verify the constituent's address before starting the survey",
+          "parameters": [
+            {
+              "name": "streetAddress",
+              "type": "string",
+              "required": true,
+              "description": "Street address of the residence"
+            },
+            {
+              "name": "city",
+              "type": "string",
+              "required": true,
+              "description": "City name"
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "required": true,
+              "description": "State abbreviation"
+            },
+            {
+              "name": "zipCode",
+              "type": "string",
+              "required": true,
+              "description": "5-digit ZIP code"
+            },
+            {
+              "name": "isCorrect",
+              "type": "boolean",
+              "required": true,
+              "description": "Whether the address is correct"
+            }
+          ]
+        },
+        {
+          "_docs": "Called after confirming how many people live at the address",
+          "actionName": "CollectHouseholdCount",
+          "description": "Collect the total number of people living at the address",
+          "parameters": [
+            {
+              "name": "totalPersons",
+              "type": "integer",
+              "required": true,
+              "description": "Total number of people living at the address"
+            },
+            {
+              "name": "censusDate",
+              "type": "string",
+              "required": true,
+              "description": "Reference date for census count (April 1st)"
+            }
+          ]
+        },
+        {
+          "_docs": "Called once for EACH person in household - contains all demographic fields per federal requirements",
+          "actionName": "CollectPersonInfo",
+          "description": "Collect demographic information for each household member",
+          "parameters": [
+            {
+              "name": "personNumber",
+              "type": "integer",
+              "required": true,
+              "description": "Sequential number of person in household (1, 2, 3, etc.)"
+            },
+            {
+              "name": "firstName",
+              "type": "string",
+              "required": true,
+              "description": "Person's first name"
+            },
+            {
+              "name": "lastName",
+              "type": "string",
+              "required": true,
+              "description": "Person's last name"
+            },
+            {
+              "name": "relationshipToHouseholder",
+              "type": "string",
+              "required": true,
+              "description": "Relationship to Person 1 (self, spouse, child, parent, sibling, roommate, other)"
+            },
+            {
+              "name": "sex",
+              "type": "string",
+              "required": true,
+              "description": "Male or Female"
+            },
+            {
+              "name": "dateOfBirth",
+              "type": "string",
+              "required": true,
+              "description": "Date of birth in MM/DD/YYYY format"
+            },
+            {
+              "name": "age",
+              "type": "integer",
+              "required": true,
+              "description": "Age in years"
+            },
+            {
+              "name": "hispanicLatino",
+              "type": "boolean",
+              "required": true,
+              "description": "Is the person of Hispanic, Latino, or Spanish origin"
+            },
+            {
+              "name": "hispanicOrigin",
+              "type": "string",
+              "required": false,
+              "description": "Specific Hispanic origin if applicable (Mexican, Puerto Rican, Cuban, etc.)"
+            },
+            {
+              "name": "race",
+              "type": "array",
+              "required": true,
+              "description": "Race categories (may select multiple)"
+            }
+          ]
+        },
+        {
+          "actionName": "CollectHousingInfo",
+          "description": "Collect housing tenure information",
+          "parameters": [
+            {
+              "name": "ownershipStatus",
+              "type": "string",
+              "required": true,
+              "description": "Owned with mortgage, Owned free and clear, Rented, Occupied without payment"
+            },
+            {
+              "name": "phoneNumber",
+              "type": "string",
+              "required": false,
+              "description": "Contact phone number for follow-up"
+            }
+          ]
+        },
+        {
+          "actionName": "SubmitCensusResponse",
+          "description": "Submit the completed census survey",
+          "parameters": [
+            {
+              "name": "confirmationNumber",
+              "type": "string",
+              "required": true,
+              "description": "Generated confirmation number for the submission"
+            },
+            {
+              "name": "completionStatus",
+              "type": "string",
+              "required": true,
+              "description": "Complete, Partial, or Refused"
+            }
+          ]
+        },
+        {
+          "actionName": "ScheduleCallback",
+          "description": "Schedule a callback for incomplete surveys",
+          "parameters": [
+            {
+              "name": "preferredDate",
+              "type": "string",
+              "required": true,
+              "description": "Preferred callback date"
+            },
+            {
+              "name": "preferredTime",
+              "type": "string",
+              "required": true,
+              "description": "Preferred callback time"
+            },
+            {
+              "name": "phoneNumber",
+              "type": "string",
+              "required": true,
+              "description": "Phone number to call back"
+            },
+            {
+              "name": "preferredLanguage",
+              "type": "string",
+              "required": false,
+              "description": "Preferred language for callback"
+            }
+          ]
+        },
+        {
+          "actionName": "EscalateToAgent",
+          "description": "Transfer the call to a live census enumerator",
+          "parameters": [
+            {
+              "name": "reason",
+              "type": "string",
+              "required": true,
+              "description": "Reason for escalation"
+            },
+            {
+              "name": "urgency",
+              "type": "string",
+              "required": true,
+              "description": "High, Medium, or Low"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "guardrails": {
+    "_docs": "GUARDRAILS prevent the AI from saying or accepting harmful content. These are critical for compliance and safety. The AI will refuse blocked content and redirect the conversation.",
+    "blockedInputMessaging": "I apologize, but I'm not able to process that request. Let me continue with the census survey questions.",
+    "blockedOutputsMessaging": "I apologize, but I cannot provide that information. Let me help you complete your census response.",
+    "contentPolicyConfig": {
+      "_docs": "Content filters block hate speech, violence, sexual content, insults. HIGH = strict blocking, MEDIUM = allows some edge cases.",
+      "filtersConfig": [
+        {
+          "type": "HATE",
+          "inputStrength": "HIGH",
+          "outputStrength": "HIGH"
+        },
+        {
+          "type": "VIOLENCE",
+          "inputStrength": "HIGH",
+          "outputStrength": "HIGH"
+        },
+        {
+          "type": "SEXUAL",
+          "inputStrength": "HIGH",
+          "outputStrength": "HIGH"
+        },
+        {
+          "type": "INSULTS",
+          "inputStrength": "MEDIUM",
+          "outputStrength": "HIGH"
+        }
+      ]
+    },
+    "sensitiveInformationPolicyConfig": {
+      "piiEntitiesConfig": [
+        {
+          "type": "SOCIAL_SECURITY_NUMBER",
+          "action": "BLOCK"
+        },
+        {
+          "type": "CREDIT_DEBIT_CARD_NUMBER",
+          "action": "BLOCK"
+        },
+        {
+          "type": "BANK_ACCOUNT_NUMBER",
+          "action": "BLOCK"
+        },
+        {
+          "type": "PIN",
+          "action": "BLOCK"
+        },
+        {
+          "type": "PASSWORD",
+          "action": "BLOCK"
+        }
+      ]
+    },
+    "topicPolicyConfig": {
+      "topicsConfig": [
+        {
+          "name": "Immigration Status",
+          "definition": "Questions or discussions about immigration status, citizenship status, or legal residency",
+          "type": "DENY",
+          "examples": [
+            "Are you a citizen?",
+            "What is your immigration status?",
+            "Are you here legally?"
+          ]
+        },
+        {
+          "name": "Financial Information",
+          "definition": "Requests for financial information like income, bank accounts, or credit",
+          "type": "DENY",
+          "examples": [
+            "What is your income?",
+            "What is your bank account number?",
+            "What is your salary?"
+          ]
+        },
+        {
+          "name": "Political Opinions",
+          "definition": "Questions or statements about political views, voting, or political parties",
+          "type": "DENY",
+          "examples": [
+            "Who did you vote for?",
+            "What political party do you support?",
+            "What do you think about the current administration?"
+          ]
+        }
+      ]
+    }
+  },
+
+  "sessionAttributes": {
+    "addressId": {
+      "type": "string",
+      "description": "Unique identifier for the address record"
+    },
+    "caseId": {
+      "type": "string",
+      "description": "Census case identifier"
+    },
+    "attemptNumber": {
+      "type": "integer",
+      "description": "Number of contact attempts for this address"
+    },
+    "preferredLanguage": {
+      "type": "string",
+      "description": "Preferred language of the constituent"
+    },
+    "currentPersonIndex": {
+      "type": "integer",
+      "description": "Index of the current person being enumerated"
+    },
+    "surveyStartTime": {
+      "type": "string",
+      "description": "Timestamp when the survey started"
+    }
+  }
+}

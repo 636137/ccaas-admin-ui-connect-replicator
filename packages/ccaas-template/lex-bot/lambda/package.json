@@ -1,0 +1,14 @@
+{
+  "name": "census-enumerator-lex-fulfillment",
+  "version": "1.0.0",
+  "description": "Lambda fulfillment handler for Census Enumerator Lex Bot",
+  "main": "fulfillment.js",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.400.0",
+    "@aws-sdk/lib-dynamodb": "^3.400.0",
+    "uuid": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

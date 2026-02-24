@@ -1,0 +1,562 @@
+{
+  "_docs": {
+    "WHAT": "Amazon Connect Contact Flow - the routing logic for incoming calls/chats",
+    "WHY": "Defines what happens at each step: greetings, Lambda calls, AI agent invocation, error handling, escalation",
+    "HOW_TO_USE": "Import this file in Amazon Connect console under Contact Flows. Replace placeholder values (ACCOUNT_ID, queue IDs, Lambda ARNs) before publishing.",
+    "FLOW_OVERVIEW": "Logging → Set Attributes → Check Channel → Welcome Message → Lookup Address → Invoke AI Agent → Process Response → Complete or Escalate"
+  },
+  "Version": "2019-10-30",
+  "StartAction": "SetLoggingBehavior",
+  "Metadata": {
+    "entryPointPosition": { "x": 20, "y": 20 },
+    "ActionMetadata": {},
+    "name": "Census Enumerator AI Agent Flow",
+    "description": "Contact flow for Census Enumerator AI Agent - Voice and Chat",
+    "type": "contactFlow",
+    "status": "published"
+  },
+  "Actions": [
+    {
+      "_docs": "Enable recording for compliance and quality assurance",
+      "Identifier": "SetLoggingBehavior",
+      "Type": "UpdateContactRecordingBehavior",
+      "Parameters": {
+        "RecordingBehavior": {
+          "RecordedParticipants": ["Agent", "Customer"]
+        }
+      },
+      "Transitions": {
+        "NextAction": "SetContactAttributes"
+      }
+    },
+    {
+      "_docs": "Set initial attributes - these persist throughout the contact for tracking and reporting",
+      "Identifier": "SetContactAttributes",
+      "Type": "UpdateContactAttributes",
+      "Parameters": {
+        "Attributes": {
+          "surveyType": "CensusEnumeration",
+          "surveyVersion": "2020",
+          "startTimestamp": "$.ContactId"
+        }
+      },
+      "Transitions": {
+        "NextAction": "CheckChannel",
+        "Errors": [
+          {
+            "NextAction": "CheckChannel",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "_docs": "Route to appropriate welcome message based on VOICE or CHAT channel",
+      "Identifier": "CheckChannel",
+      "Type": "CheckContactAttribute",
+      "Parameters": {
+        "Attribute": {
+          "Type": "System",
+          "Name": "Channel"
+        },
+        "Conditions": [
+          {
+            "ComparisonType": "Equals",
+            "Value": "VOICE"
+          },
+          {
+            "ComparisonType": "Equals",
+            "Value": "CHAT"
+          }
+        ]
+      },
+      "Transitions": {
+        "NextAction": "WelcomePromptVoice",
+        "Conditions": [
+          {
+            "NextAction": "WelcomePromptVoice",
+            "Condition": {
+              "Operand": "VOICE"
+            }
+          },
+          {
+            "NextAction": "WelcomePromptChat",
+            "Condition": {
+              "Operand": "CHAT"
+            }
+          }
+        ],
+        "Errors": [
+          {
+            "NextAction": "WelcomePromptVoice",
+            "ErrorType": "NoMatchingCondition"
+          }
+        ]
+      }
+    },
+    {
+      "_docs": "Voice greeting - spoken by Polly. Includes Title 13 confidentiality assurance.",
+      "Identifier": "WelcomePromptVoice",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Hello! Thank you for taking the time to speak with me today. I'm an automated assistant calling on behalf of the U.S. Census Bureau to help complete your household's census information. Your responses are protected by federal law under Title 13 and are kept strictly confidential."
+      },
+      "Transitions": {
+        "NextAction": "LookupAddress",
+        "Errors": [
+          {
+            "NextAction": "ErrorHandler",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "_docs": "Chat greeting - supports markdown formatting for better UX",
+      "Identifier": "WelcomePromptChat",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Hello! Thank you for connecting with us. I'm an AI assistant here on behalf of the **U.S. Census Bureau** to help complete your household's census information.\n\nYour responses are protected by federal law under Title 13 and are kept strictly confidential. They will only be used for statistical purposes."
+      },
+      "Transitions": {
+        "NextAction": "LookupAddress",
+        "Errors": [
+          {
+            "NextAction": "ErrorHandler",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "_docs": "Call Lambda to find this constituent's address by phone number. REPLACE ACCOUNT_ID with your AWS account.",
+      "Identifier": "LookupAddress",
+      "Type": "InvokeLambdaFunction",
+      "Parameters": {
+        "LambdaFunctionARN": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:CensusAgentBackend",
+        "InvocationTimeLimitSeconds": "8",
+        "LambdaInvocationAttributes": {
+          "action": "lookupAddress",
+          "phoneNumber": "$.CustomerEndpoint.Address"
+        }
+      },
+      "Transitions": {
+        "NextAction": "CheckAddressFound",
+        "Errors": [
+          {
+            "NextAction": "NoAddressFound",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "_docs": "Check if Lambda found an address for this caller",
+      "Identifier": "CheckAddressFound",
+      "Type": "CheckContactAttribute",
+      "Parameters": {
+        "Attribute": {
+          "Type": "External",
+          "Name": "addressFound"
+        },
+        "Conditions": [
+          {
+            "ComparisonType": "Equals",
+            "Value": "true"
+          }
+        ]
+      },
+      "Transitions": {
+        "NextAction": "InvokeAIAgent",
+        "Conditions": [
+          {
+            "NextAction": "InvokeAIAgent",
+            "Condition": {
+              "Operand": "true"
+            }
+          }
+        ],
+        "Errors": [
+          {
+            "NextAction": "NoAddressFound",
+            "ErrorType": "NoMatchingCondition"
+          }
+        ]
+      }
+    },
+    {
+      "_docs": "No address on file - transfer to human agent for manual lookup",
+      "Identifier": "NoAddressFound",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "I'm sorry, I don't have an address on file associated with this phone number. Let me connect you with a census representative who can assist you further."
+      },
+      "Transitions": {
+        "NextAction": "TransferToAgent",
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "_docs": "MAIN AI AGENT INVOCATION - this is where the census survey actually happens. REPLACE AI_AGENT_MODULE_ID with your flow module ID.",
+      "Identifier": "InvokeAIAgent",
+      "Type": "InvokeFlowModule",
+      "Parameters": {
+        "FlowModuleId": "AI_AGENT_MODULE_ID",
+        "Parameters": {
+          "systemPrompt": "You are a Census Enumerator AI assistant. Conduct the census survey professionally and collect household information. The constituent's address is: $.Attributes.streetAddress, $.Attributes.city, $.Attributes.state $.Attributes.zipCode. Start by verifying this address is correct, then proceed to collect the household count and information for each person. Be patient, clear, and emphasize confidentiality. If the constituent wants to stop or speak to a human, accommodate their request.",
+          "userMessage": "$.Attributes.lastUserMessage"
+        }
+      },
+      "Transitions": {
+        "NextAction": "ProcessAIResponse",
+        "Errors": [
+          {
+            "NextAction": "AIFallback",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "_docs": "Route based on AI response: continue survey, complete, escalate, or schedule callback",
+      "Identifier": "ProcessAIResponse",
+      "Type": "CheckContactAttribute",
+      "Parameters": {
+        "Attribute": {
+          "Type": "External",
+          "Name": "aiAction"
+        },
+        "Conditions": [
+          {
+            "ComparisonType": "Equals",
+            "Value": "CONTINUE"
+          },
+          {
+            "ComparisonType": "Equals",
+            "Value": "COMPLETE"
+          },
+          {
+            "ComparisonType": "Equals",
+            "Value": "ESCALATE"
+          },
+          {
+            "ComparisonType": "Equals",
+            "Value": "CALLBACK"
+          }
+        ]
+      },
+      "Transitions": {
+        "NextAction": "ContinueConversation",
+        "Conditions": [
+          {
+            "NextAction": "ContinueConversation",
+            "Condition": {
+              "Operand": "CONTINUE"
+            }
+          },
+          {
+            "NextAction": "SurveyComplete",
+            "Condition": {
+              "Operand": "COMPLETE"
+            }
+          },
+          {
+            "NextAction": "TransferToAgent",
+            "Condition": {
+              "Operand": "ESCALATE"
+            }
+          },
+          {
+            "NextAction": "ScheduleCallback",
+            "Condition": {
+              "Operand": "CALLBACK"
+            }
+          }
+        ],
+        "Errors": [
+          {
+            "NextAction": "ContinueConversation",
+            "ErrorType": "NoMatchingCondition"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "ContinueConversation",
+      "Type": "GetParticipantInput",
+      "Parameters": {
+        "Text": "$.External.aiResponse",
+        "TextToSpeechType": "text",
+        "InputTimeLimitSeconds": "30",
+        "DTMFConfiguration": {
+          "InputTerminationSequence": "#",
+          "DisableCancelKey": false
+        },
+        "LexV2Bot": {
+          "AliasArn": "arn:aws:lex:us-east-1:ACCOUNT_ID:bot-alias/CENSUS_BOT_ID/CENSUS_BOT_ALIAS"
+        }
+      },
+      "Transitions": {
+        "NextAction": "InvokeAIAgent",
+        "Conditions": [],
+        "Errors": [
+          {
+            "NextAction": "InputTimeout",
+            "ErrorType": "InputTimeLimitExceeded"
+          },
+          {
+            "NextAction": "AIFallback",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "InputTimeout",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "I didn't hear a response. Are you still there? If you need more time, please let me know."
+      },
+      "Transitions": {
+        "NextAction": "TimeoutRetry",
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "TimeoutRetry",
+      "Type": "GetParticipantInput",
+      "Parameters": {
+        "Text": "Please respond when you're ready, or say 'goodbye' if you need to end the call.",
+        "TextToSpeechType": "text",
+        "InputTimeLimitSeconds": "15"
+      },
+      "Transitions": {
+        "NextAction": "InvokeAIAgent",
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "InputTimeLimitExceeded"
+          },
+          {
+            "NextAction": "InvokeAIAgent",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "SurveyComplete",
+      "Type": "InvokeLambdaFunction",
+      "Parameters": {
+        "LambdaFunctionARN": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:CensusAgentBackend",
+        "InvocationTimeLimitSeconds": "8",
+        "LambdaInvocationAttributes": {
+          "action": "saveSurvey",
+          "surveyData": "$.External.collectedData",
+          "caseId": "$.Attributes.caseId",
+          "status": "COMPLETE"
+        }
+      },
+      "Transitions": {
+        "NextAction": "CompletionMessage",
+        "Errors": [
+          {
+            "NextAction": "CompletionMessage",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "CompletionMessage",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Thank you for completing the census survey! Your confirmation number is $.External.confirmationNumber. Your response helps ensure fair representation and funding for your community. Have a great day!"
+      },
+      "Transitions": {
+        "NextAction": "DisconnectFlow",
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "ScheduleCallback",
+      "Type": "InvokeLambdaFunction",
+      "Parameters": {
+        "LambdaFunctionARN": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:CensusAgentBackend",
+        "InvocationTimeLimitSeconds": "8",
+        "LambdaInvocationAttributes": {
+          "action": "scheduleCallback",
+          "caseId": "$.Attributes.caseId",
+          "phoneNumber": "$.CustomerEndpoint.Address",
+          "callbackTime": "$.External.requestedCallbackTime"
+        }
+      },
+      "Transitions": {
+        "NextAction": "CallbackConfirmation",
+        "Errors": [
+          {
+            "NextAction": "CallbackConfirmation",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "CallbackConfirmation",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "I've scheduled a callback for $.External.callbackDateTime. We'll contact you at that time. Thank you for your time, and have a great day!"
+      },
+      "Transitions": {
+        "NextAction": "DisconnectFlow",
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "TransferToAgent",
+      "Type": "TransferToQueue",
+      "Parameters": {
+        "QueueId": "CENSUS_AGENT_QUEUE_ID",
+        "ContactFlowId": "AGENT_WHISPER_FLOW_ID"
+      },
+      "Transitions": {
+        "NextAction": "TransferSuccess",
+        "Errors": [
+          {
+            "NextAction": "TransferFailed",
+            "ErrorType": "QueueAtCapacity"
+          },
+          {
+            "NextAction": "TransferFailed",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "TransferSuccess",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "I'm connecting you with a census representative now. Please hold for just a moment."
+      },
+      "Transitions": {
+        "NextAction": "Wait",
+        "Errors": [
+          {
+            "NextAction": "Wait",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "Wait",
+      "Type": "Wait",
+      "Parameters": {
+        "WaitTime": "300"
+      },
+      "Transitions": {
+        "NextAction": "DisconnectFlow",
+        "TimerExpired": {
+          "NextAction": "DisconnectFlow"
+        },
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "TransferFailed",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "I'm sorry, all of our census representatives are currently busy. You can complete your census online at census.gov, or call 1-800-923-8282. Would you like me to schedule a callback instead?"
+      },
+      "Transitions": {
+        "NextAction": "TransferFailedInput",
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "TransferFailedInput",
+      "Type": "GetParticipantInput",
+      "Parameters": {
+        "Text": "Say 'yes' for a callback, or 'no' to end the call.",
+        "InputTimeLimitSeconds": "10"
+      },
+      "Transitions": {
+        "NextAction": "DisconnectFlow",
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "AIFallback",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "I'm having some technical difficulties. Let me connect you with a census representative who can help you complete the survey."
+      },
+      "Transitions": {
+        "NextAction": "TransferToAgent",
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "ErrorHandler",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "I apologize, but we're experiencing technical difficulties. Please try again later or complete your census online at census.gov."
+      },
+      "Transitions": {
+        "NextAction": "DisconnectFlow",
+        "Errors": [
+          {
+            "NextAction": "DisconnectFlow",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "DisconnectFlow",
+      "Type": "DisconnectParticipant",
+      "Parameters": {}
+    }
+  ]
+}

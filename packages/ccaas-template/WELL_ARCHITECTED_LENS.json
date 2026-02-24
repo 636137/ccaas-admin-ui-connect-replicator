@@ -1,0 +1,1308 @@
+{
+  "schemaVersion": "2021-11-01",
+  "name": "Government CCaaS in a Box",
+  "description": "AWS Well-Architected custom lens for validating Government Contact Center as a Service (CCaaS) deployments using Amazon Connect. This lens covers FedRAMP compliance, multi-tenancy, disaster recovery, security controls, and operational best practices for government agency contact centers.",
+  "pillars": [
+    {
+      "id": "security",
+      "name": "Security",
+      "questions": [
+        {
+          "id": "sec_01",
+          "title": "How do you manage encryption for data at rest?",
+          "description": "Government CCaaS deployments must encrypt all data at rest using customer-managed KMS keys (CMKs) to meet FedRAMP requirements and ensure government data sovereignty.",
+          "helpfulResource": {
+            "displayText": "Encryption of data at rest protects sensitive citizen data including PII. Using CMKs allows rotation, audit trails, and access control. See FedRAMP SC-28 control family.",
+            "url": "https://docs.aws.amazon.com/kms/latest/developerguide/overview.html"
+          },
+          "choices": [
+            {
+              "id": "sec_01_no",
+              "title": "No encryption or AWS-managed keys only",
+              "helpfulResource": {
+                "displayText": "Using no encryption or only AWS-managed keys does not meet FedRAMP requirements. Customer-managed keys are required for audit trails and key rotation control.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/encryption-at-rest.html"
+              },
+              "improvementPlan": {
+                "displayText": "Create customer-managed KMS keys for all data stores. Enable key rotation. Configure key policies with least-privilege access. Apply to: DynamoDB tables, S3 buckets, Connect instance, Lambda environment variables."
+              }
+            },
+            {
+              "id": "sec_01_partial",
+              "title": "CMKs for some resources but not all",
+              "helpfulResource": {
+                "displayText": "Partial encryption leaves gaps. All resources storing citizen data must use CMKs including: DynamoDB, S3, Connect recordings, CloudWatch logs, and secrets.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/encryption-at-rest.html"
+              },
+              "improvementPlan": {
+                "displayText": "Audit all data stores to identify resources not using CMKs. Create a KMS key per service type. Update Terraform to enforce CMK usage. Enable AWS Config rule 'encrypted-volumes' and 'dynamodb-table-encrypted'."
+              }
+            },
+            {
+              "id": "sec_01_yes",
+              "title": "All data at rest encrypted with customer-managed KMS keys",
+              "helpfulResource": {
+                "displayText": "Comprehensive encryption with CMKs meets FedRAMP SC-28 requirements. Ensure key policies are documented and key rotation is enabled.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/encryption-at-rest.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "sec_01_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "sec_01_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "sec_01_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "sec_02",
+          "title": "How do you protect data in transit?",
+          "description": "All communications must be encrypted using TLS 1.2 or higher. This includes agent communications, API calls, and inter-service traffic.",
+          "helpfulResource": {
+            "displayText": "Amazon Connect enforces TLS for all connections. Ensure VPC endpoints use TLS and any custom integrations enforce minimum TLS 1.2. See FedRAMP SC-8 and SC-13.",
+            "url": "https://docs.aws.amazon.com/connect/latest/adminguide/data-protection.html"
+          },
+          "choices": [
+            {
+              "id": "sec_02_no",
+              "title": "No explicit TLS configuration or older TLS versions allowed",
+              "helpfulResource": {
+                "displayText": "Allowing older TLS versions or not enforcing TLS creates security vulnerabilities and fails FedRAMP requirements.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/data-protection.html"
+              },
+              "improvementPlan": {
+                "displayText": "Configure S3 bucket policies to deny non-HTTPS requests. Set minimum TLS version on CloudFront distributions. Use VPC endpoints for private connectivity. Configure API Gateway to require TLS 1.2."
+              }
+            },
+            {
+              "id": "sec_02_partial",
+              "title": "TLS enforced for public traffic but not internal",
+              "helpfulResource": {
+                "displayText": "Internal traffic must also be encrypted per FedRAMP requirements. Use VPC endpoints and ensure Lambda-to-DynamoDB communications use TLS.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/data-protection.html"
+              },
+              "improvementPlan": {
+                "displayText": "Deploy VPC endpoints for all AWS services (DynamoDB, S3, Lambda, etc.). Configure security groups to restrict traffic to endpoints. Enable AWS Config rules for TLS compliance."
+              }
+            },
+            {
+              "id": "sec_02_yes",
+              "title": "TLS 1.2+ enforced for all data in transit including internal traffic",
+              "helpfulResource": {
+                "displayText": "Comprehensive TLS enforcement meets SC-8 and SC-13 requirements. Document TLS configurations in SSP.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/data-protection.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "sec_02_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "sec_02_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "sec_02_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "sec_03",
+          "title": "How do you implement identity and access management?",
+          "description": "IAM policies must follow least-privilege principles. Service accounts, agents, and administrators should have only the permissions required for their roles.",
+          "helpfulResource": {
+            "displayText": "FedRAMP AC-2, AC-3, and AC-6 require strict access control. Use IAM roles for services, Connect security profiles for agents, and MFA for all human access.",
+            "url": "https://docs.aws.amazon.com/connect/latest/adminguide/security-iam.html"
+          },
+          "choices": [
+            {
+              "id": "sec_03_no",
+              "title": "Overly permissive IAM policies or shared credentials",
+              "helpfulResource": {
+                "displayText": "Overly permissive access violates FedRAMP and creates security risks. Each service and user should have minimum necessary permissions.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/security-iam.html"
+              },
+              "improvementPlan": {
+                "displayText": "Audit all IAM policies using IAM Access Analyzer. Remove wildcard permissions. Create service-specific roles for Lambda functions. Implement Connect security profiles per role. Enable MFA for all IAM users. Remove any shared credentials."
+              }
+            },
+            {
+              "id": "sec_03_partial",
+              "title": "Service roles defined but human access not fully controlled",
+              "helpfulResource": {
+                "displayText": "Human access must be controlled through IAM Identity Center (SSO), MFA required, and session policies configured.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/security-iam.html"
+              },
+              "improvementPlan": {
+                "displayText": "Implement IAM Identity Center for centralized access. Require MFA for all human users. Create Connect security profiles that limit access to tenant-specific resources. Implement ABAC using tags. Enable AWS Config rule 'iam-user-mfa-enabled'."
+              }
+            },
+            {
+              "id": "sec_03_yes",
+              "title": "Least-privilege IAM with MFA, SSO, and role-based Connect access",
+              "helpfulResource": {
+                "displayText": "Comprehensive IAM implementation meets AC control family requirements. Document all roles and permissions in SSP.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/security-iam.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "sec_03_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "sec_03_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "sec_03_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "sec_04",
+          "title": "How do you implement audit logging and monitoring?",
+          "description": "All administrative actions, API calls, and security events must be logged to CloudTrail and CloudWatch. Logs must be retained for compliance and protected from tampering.",
+          "helpfulResource": {
+            "displayText": "FedRAMP AU control family requires comprehensive audit logging. CloudTrail logs API activity, Connect generates CTRs, and CloudWatch captures operational events.",
+            "url": "https://docs.aws.amazon.com/connect/latest/adminguide/logging-and-monitoring.html"
+          },
+          "choices": [
+            {
+              "id": "sec_04_no",
+              "title": "No centralized logging or CloudTrail disabled",
+              "helpfulResource": {
+                "displayText": "Without audit logging, you cannot detect security incidents or demonstrate compliance. This is a critical FedRAMP failure.",
+                "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html"
+              },
+              "improvementPlan": {
+                "displayText": "Enable CloudTrail in all regions with management and data events. Create S3 bucket with versioning and object lock for log storage. Enable CloudWatch Logs for Lambda functions. Configure log retention policies (minimum 1 year for FedRAMP)."
+              }
+            },
+            {
+              "id": "sec_04_partial",
+              "title": "CloudTrail enabled but limited retention or no alerting",
+              "helpfulResource": {
+                "displayText": "Logging without alerting limits incident response capability. FedRAMP requires active monitoring and alerting for security events.",
+                "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html"
+              },
+              "improvementPlan": {
+                "displayText": "Configure CloudWatch alarms for security events (root login, IAM changes, failed auth). Set log retention to meet compliance requirements. Enable log file integrity validation. Store logs in separate security account. Export to SIEM for analysis."
+              }
+            },
+            {
+              "id": "sec_04_yes",
+              "title": "Comprehensive logging with alerting, integrity validation, and retention",
+              "helpfulResource": {
+                "displayText": "Full audit logging implementation meets AU control family. Ensure logs are included in incident response procedures.",
+                "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "sec_04_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "sec_04_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "sec_04_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "sec_05",
+          "title": "How do you protect against network threats?",
+          "description": "Contact center infrastructure must be protected against DDoS attacks, unauthorized access, and malicious traffic using WAF, VPCs, and network ACLs.",
+          "helpfulResource": {
+            "displayText": "FedRAMP SC-5 and SC-7 require network protection. AWS WAF protects web interfaces, VPCs isolate infrastructure, and Shield Standard provides DDoS protection.",
+            "url": "https://docs.aws.amazon.com/waf/latest/developerguide/waf-chapter.html"
+          },
+          "choices": [
+            {
+              "id": "sec_05_no",
+              "title": "No WAF or VPC configuration",
+              "helpfulResource": {
+                "displayText": "Without network protection, contact center APIs and interfaces are vulnerable to attacks. This fails FedRAMP network security controls.",
+                "url": "https://docs.aws.amazon.com/waf/latest/developerguide/waf-chapter.html"
+              },
+              "improvementPlan": {
+                "displayText": "Deploy WAF with AWS managed rule sets (Core Rule Set, Known Bad Inputs, IP Reputation). Configure VPC with private subnets for Lambda. Add VPC endpoints for AWS service access. Enable AWS Shield Standard (included). Configure security groups for minimum access."
+              }
+            },
+            {
+              "id": "sec_05_partial",
+              "title": "WAF deployed but rules not optimized or VPC incomplete",
+              "helpfulResource": {
+                "displayText": "Basic protection may not cover all attack vectors. WAF rules should be tuned for your application and VPC should include all endpoints.",
+                "url": "https://docs.aws.amazon.com/waf/latest/developerguide/waf-chapter.html"
+              },
+              "improvementPlan": {
+                "displayText": "Add rate limiting rules to WAF. Enable WAF logging for security analysis. Configure VPC flow logs. Add all required VPC endpoints (S3, DynamoDB, Lambda, etc.). Review and tighten security groups. Consider Shield Advanced for critical workloads."
+              }
+            },
+            {
+              "id": "sec_05_yes",
+              "title": "Comprehensive WAF rules, VPC isolation, and DDoS protection",
+              "helpfulResource": {
+                "displayText": "Full network protection meets SC-5 and SC-7 requirements. Document network architecture and protection mechanisms in SSP.",
+                "url": "https://docs.aws.amazon.com/waf/latest/developerguide/waf-chapter.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "sec_05_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "sec_05_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "sec_05_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "sec_06",
+          "title": "How do you handle PII and sensitive data?",
+          "description": "Government contact centers handle personally identifiable information (PII) that requires special handling including redaction, access controls, and retention policies.",
+          "helpfulResource": {
+            "displayText": "PII handling must comply with Privacy Act and FedRAMP requirements. Contact Lens can redact PII from transcripts. Data should be classified and tagged appropriately.",
+            "url": "https://docs.aws.amazon.com/connect/latest/adminguide/contact-lens.html"
+          },
+          "choices": [
+            {
+              "id": "sec_06_no",
+              "title": "No PII classification or protection mechanisms",
+              "helpfulResource": {
+                "displayText": "Unprotected PII creates privacy violations and compliance failures. All citizen data must be identified, classified, and protected.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/contact-lens.html"
+              },
+              "improvementPlan": {
+                "displayText": "Implement data classification tagging (DataClassification tag). Enable Contact Lens PII redaction. Configure S3 lifecycle policies to limit PII retention. Create data handling procedures. Enable Macie for S3 PII discovery."
+              }
+            },
+            {
+              "id": "sec_06_partial",
+              "title": "Some PII protection but not comprehensive",
+              "helpfulResource": {
+                "displayText": "Partial protection leaves gaps. All channels (voice, chat, data stores) must have PII handling configured.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/contact-lens.html"
+              },
+              "improvementPlan": {
+                "displayText": "Audit all data stores for PII. Deploy Contact Lens redaction for all locales. Configure DynamoDB to not store raw PII in searchable fields. Implement access logging for PII access. Create data retention policies meeting Privacy Act requirements."
+              }
+            },
+            {
+              "id": "sec_06_yes",
+              "title": "Comprehensive PII handling with classification, redaction, and access controls",
+              "helpfulResource": {
+                "displayText": "Full PII protection meets Privacy Act and FedRAMP SI-12 requirements. Document data handling in privacy impact assessment.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/contact-lens.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "sec_06_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "sec_06_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "sec_06_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reliability",
+      "name": "Reliability",
+      "questions": [
+        {
+          "id": "rel_01",
+          "title": "How do you implement disaster recovery?",
+          "description": "Government contact centers must have disaster recovery capabilities to maintain operations during regional outages. Cross-region replication and failover procedures are essential.",
+          "helpfulResource": {
+            "displayText": "FedRAMP CP control family requires continuity planning. Amazon Connect can be deployed in multiple regions with DynamoDB Global Tables for data replication.",
+            "url": "https://docs.aws.amazon.com/connect/latest/adminguide/disaster-recovery-resiliency.html"
+          },
+          "choices": [
+            {
+              "id": "rel_01_no",
+              "title": "No disaster recovery planning or secondary region",
+              "helpfulResource": {
+                "displayText": "Without DR, a regional outage could result in complete service loss. Government services require continuity planning.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/disaster-recovery-resiliency.html"
+              },
+              "improvementPlan": {
+                "displayText": "Deploy secondary Connect instance in another FedRAMP region (us-west-2 or GovCloud). Configure DynamoDB Global Tables. Create cross-region S3 replication. Develop and document failover procedures. Test DR capability quarterly."
+              }
+            },
+            {
+              "id": "rel_01_partial",
+              "title": "Secondary region exists but failover not automated or tested",
+              "helpfulResource": {
+                "displayText": "DR infrastructure without tested procedures may not work during actual disaster. Regular testing is required.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/disaster-recovery-resiliency.html"
+              },
+              "improvementPlan": {
+                "displayText": "Create automated failover scripts. Document RTO/RPO objectives. Schedule quarterly DR drills. Create runbooks for each failure scenario. Train operations team on failover procedures. Monitor replication lag."
+              }
+            },
+            {
+              "id": "rel_01_yes",
+              "title": "Multi-region deployment with automated failover and regular testing",
+              "helpfulResource": {
+                "displayText": "Comprehensive DR meets CP control family requirements. Document results of DR tests in POA&M.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/disaster-recovery-resiliency.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "rel_01_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "rel_01_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "rel_01_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "rel_02",
+          "title": "How do you manage service quotas and limits?",
+          "description": "AWS service quotas can cause failures if exceeded. Proactive monitoring and quota increases ensure service continuity during peak loads.",
+          "helpfulResource": {
+            "displayText": "Key quotas include: Connect concurrent calls (100 default), Lex voice requests/sec (25 default), Lambda concurrent executions (1000 default), and Bedrock requests/min.",
+            "url": "https://docs.aws.amazon.com/connect/latest/adminguide/amazon-connect-service-limits.html"
+          },
+          "choices": [
+            {
+              "id": "rel_02_no",
+              "title": "No quota monitoring or planning",
+              "helpfulResource": {
+                "displayText": "Without quota monitoring, services will fail unexpectedly during peak usage. Critical for government services with variable demand.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/amazon-connect-service-limits.html"
+              },
+              "improvementPlan": {
+                "displayText": "Document all relevant quotas. Create CloudWatch dashboard with quota metrics. Request increases for: Lex voice requests (100+), Connect concurrent calls (based on agent count × 1.5), Lambda concurrent executions. Set alarms at 80% utilization."
+              }
+            },
+            {
+              "id": "rel_02_partial",
+              "title": "Some quotas increased but no monitoring",
+              "helpfulResource": {
+                "displayText": "Quotas without monitoring can still cause failures. Active monitoring enables proactive capacity management.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/amazon-connect-service-limits.html"
+              },
+              "improvementPlan": {
+                "displayText": "Deploy quota monitoring dashboard. Set CloudWatch alarms for all critical quotas. Create runbook for quota increase process. Schedule monthly quota review. Enable Service Quotas dashboard in AWS Console."
+              }
+            },
+            {
+              "id": "rel_02_yes",
+              "title": "Proactive quota management with monitoring and alerting",
+              "helpfulResource": {
+                "displayText": "Active quota management prevents service disruptions. Document quota values and increase procedures.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/amazon-connect-service-limits.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "rel_02_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "rel_02_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "rel_02_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "rel_03",
+          "title": "How do you implement backup and recovery?",
+          "description": "Critical data and configurations must be backed up regularly with tested recovery procedures. This includes DynamoDB tables, S3 recordings, and Connect configurations.",
+          "helpfulResource": {
+            "displayText": "FedRAMP CP-9 requires backup procedures. AWS Backup can automate DynamoDB and S3 backups. Connect configurations should be exported regularly.",
+            "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisbackup.html"
+          },
+          "choices": [
+            {
+              "id": "rel_03_no",
+              "title": "No backup procedures or ad-hoc only",
+              "helpfulResource": {
+                "displayText": "Without backups, data loss from human error or corruption cannot be recovered. Critical for government data stewardship.",
+                "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisbackup.html"
+              },
+              "improvementPlan": {
+                "displayText": "Deploy AWS Backup with vault and backup plans. Configure DynamoDB point-in-time recovery. Enable S3 versioning. Create Connect configuration export script. Define RPO objectives (recommend 15 minutes for data, daily for config). Test recovery procedures."
+              }
+            },
+            {
+              "id": "rel_03_partial",
+              "title": "Automated backups but no recovery testing",
+              "helpfulResource": {
+                "displayText": "Untested backups may fail during actual recovery. Regular restore testing validates backup integrity.",
+                "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisbackup.html"
+              },
+              "improvementPlan": {
+                "displayText": "Schedule quarterly recovery tests. Create restore runbooks. Test DynamoDB point-in-time restore. Validate Connect config import. Document recovery time actuals. Cross-region backup replication for DR scenarios."
+              }
+            },
+            {
+              "id": "rel_03_yes",
+              "title": "Automated backups with regular recovery testing and cross-region replication",
+              "helpfulResource": {
+                "displayText": "Comprehensive backup strategy meets CP-9 requirements. Document backup/recovery procedures in operational runbooks.",
+                "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisbackup.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "rel_03_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "rel_03_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "rel_03_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "rel_04",
+          "title": "How do you handle Lambda cold starts and timeouts?",
+          "description": "Lambda cold starts can cause delays in voice calls (2-5 seconds). Contact flow timeouts and fallback handling prevent silent failures.",
+          "helpfulResource": {
+            "displayText": "Connect Lambda invoke blocks timeout after 20 seconds. Cold starts on first invocation can delay responses. Provisioned concurrency eliminates cold starts.",
+            "url": "https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html"
+          },
+          "choices": [
+            {
+              "id": "rel_04_no",
+              "title": "No cold start mitigation or timeout handling",
+              "helpfulResource": {
+                "displayText": "Without mitigation, callers may experience long pauses or silent failures. Degraded customer experience.",
+                "url": "https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html"
+              },
+              "improvementPlan": {
+                "displayText": "Configure provisioned concurrency for production Lambda functions. Add error handling blocks in contact flows. Configure timeout prompts ('Please wait while I look that up'). Implement exponential backoff for Bedrock calls. Monitor Lambda duration metrics."
+              }
+            },
+            {
+              "id": "rel_04_partial",
+              "title": "Some timeout handling but no provisioned concurrency",
+              "helpfulResource": {
+                "displayText": "Timeout handling helps but cold starts still cause delays. Provisioned concurrency recommended for production voice workloads.",
+                "url": "https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html"
+              },
+              "improvementPlan": {
+                "displayText": "Enable provisioned concurrency (start with 5-10 concurrent executions). Monitor actual concurrent executions to right-size. Keep functions warm with scheduled invocations as alternative. Optimize function code to reduce initialization time."
+              }
+            },
+            {
+              "id": "rel_04_yes",
+              "title": "Provisioned concurrency with comprehensive timeout and error handling",
+              "helpfulResource": {
+                "displayText": "Production-ready Lambda configuration ensures consistent response times. Monitor cost impact of provisioned concurrency.",
+                "url": "https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "rel_04_no",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "rel_04_partial",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "rel_04_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "performance",
+      "name": "Performance Efficiency",
+      "questions": [
+        {
+          "id": "perf_01",
+          "title": "How do you optimize AI/ML response times?",
+          "description": "AI-powered contact centers using Bedrock and Lex must respond within caller expectations (typically < 3 seconds). Latency optimization is critical for voice interactions.",
+          "helpfulResource": {
+            "displayText": "Voice callers expect responses within 3 seconds. Lex should resolve in < 2 seconds, Bedrock in < 5 seconds for complex queries. Monitor p99 latencies.",
+            "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/inference-optimize.html"
+          },
+          "choices": [
+            {
+              "id": "perf_01_no",
+              "title": "No latency monitoring or optimization",
+              "helpfulResource": {
+                "displayText": "Without latency monitoring, AI responses may be slow causing caller frustration and abandonment.",
+                "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/inference-optimize.html"
+              },
+              "improvementPlan": {
+                "displayText": "Add latency metrics to CloudWatch dashboard. Optimize Bedrock prompts (shorter context = faster). Configure Lex timeout settings. Use shorter Claude model responses. Consider streaming responses for long answers. Set latency alarms (p99 > 5s)."
+              }
+            },
+            {
+              "id": "perf_01_partial",
+              "title": "Basic monitoring but no optimization implemented",
+              "helpfulResource": {
+                "displayText": "Monitoring without action won't improve performance. Use metrics to identify and fix latency bottlenecks.",
+                "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/inference-optimize.html"
+              },
+              "improvementPlan": {
+                "displayText": "Analyze latency data to identify slowest operations. Optimize Bedrock prompts - reduce token count. Cache common Lex responses. Pre-warm Lambda functions. Consider provisioned throughput for Bedrock if available. Use Claude 3 Haiku for simple queries, Sonnet for complex."
+              }
+            },
+            {
+              "id": "perf_01_yes",
+              "title": "Optimized AI responses with monitoring and latency SLAs",
+              "helpfulResource": {
+                "displayText": "Optimized AI performance ensures good caller experience. Continue monitoring for regression.",
+                "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/inference-optimize.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "perf_01_no",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "perf_01_partial",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "perf_01_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "perf_02",
+          "title": "How do you right-size compute resources?",
+          "description": "Lambda memory, DynamoDB capacity, and other resources should be right-sized based on actual usage patterns to optimize cost and performance.",
+          "helpfulResource": {
+            "displayText": "Lambda memory affects both performance and cost. DynamoDB on-demand scales automatically but monitor for hot partitions. Right-size based on metrics.",
+            "url": "https://docs.aws.amazon.com/lambda/latest/operatorguide/right-sizing.html"
+          },
+          "choices": [
+            {
+              "id": "perf_02_no",
+              "title": "Default sizing without analysis",
+              "helpfulResource": {
+                "displayText": "Default Lambda memory (128MB) is often too low for AI workloads. Under-sizing causes slow performance.",
+                "url": "https://docs.aws.amazon.com/lambda/latest/operatorguide/right-sizing.html"
+              },
+              "improvementPlan": {
+                "displayText": "Use AWS Lambda Power Tuning to find optimal memory. Monitor DynamoDB consumed capacity. Analyze Lambda duration at different memory settings. Recommended: 512MB-1024MB for Bedrock/Lex integrations. Enable DynamoDB on-demand for variable workloads."
+              }
+            },
+            {
+              "id": "perf_02_partial",
+              "title": "Some optimization but not systematic",
+              "helpfulResource": {
+                "displayText": "Ad-hoc optimization may miss savings or performance gains. Systematic right-sizing recommended.",
+                "url": "https://docs.aws.amazon.com/lambda/latest/operatorguide/right-sizing.html"
+              },
+              "improvementPlan": {
+                "displayText": "Run Lambda Power Tuning for all functions. Review DynamoDB partition design for hot partitions. Schedule quarterly right-sizing reviews. Use Cost Explorer to identify optimization opportunities. Document sizing decisions."
+              }
+            },
+            {
+              "id": "perf_02_yes",
+              "title": "Systematic right-sizing with regular reviews",
+              "helpfulResource": {
+                "displayText": "Proper right-sizing balances cost and performance. Continue monitoring as usage patterns change.",
+                "url": "https://docs.aws.amazon.com/lambda/latest/operatorguide/right-sizing.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "perf_02_no",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "perf_02_partial",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "perf_02_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "perf_03",
+          "title": "How do you handle DynamoDB partition design?",
+          "description": "DynamoDB partition key design affects performance and cost. Hot partitions cause throttling. Proper key design distributes load evenly.",
+          "helpfulResource": {
+            "displayText": "Use composite keys (tenant_id + case_id) to distribute load. Avoid hot partitions from uneven access patterns. Monitor ConsumedReadCapacityUnits by partition.",
+            "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html"
+          },
+          "choices": [
+            {
+              "id": "perf_03_no",
+              "title": "No partition design consideration or single-value keys",
+              "helpfulResource": {
+                "displayText": "Poor partition design causes throttling under load. Single-value partition keys create hot partitions.",
+                "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html"
+              },
+              "improvementPlan": {
+                "displayText": "Review partition key design. Use composite keys (tenant_id#case_id). Distribute writes using randomization if needed. Monitor ThrottledRequests metric. Consider GSIs for alternate access patterns. Avoid 'scan' operations in production."
+              }
+            },
+            {
+              "id": "perf_03_partial",
+              "title": "Composite keys but access patterns not fully optimized",
+              "helpfulResource": {
+                "displayText": "Good key design is a start. Monitor actual access patterns and optimize GSIs for query efficiency.",
+                "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html"
+              },
+              "improvementPlan": {
+                "displayText": "Analyze query patterns using DynamoDB Contributor Insights. Add GSIs for frequent access patterns. Review sort key usage for range queries. Consider single-table design for complex relationships. Monitor partition metrics."
+              }
+            },
+            {
+              "id": "perf_03_yes",
+              "title": "Optimized partition design with monitoring for hot partitions",
+              "helpfulResource": {
+                "displayText": "Well-designed DynamoDB tables scale efficiently. Continue monitoring as data and access patterns evolve.",
+                "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "perf_03_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "perf_03_partial",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "perf_03_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cost",
+      "name": "Cost Optimization",
+      "questions": [
+        {
+          "id": "cost_01",
+          "title": "How do you implement cost allocation tagging?",
+          "description": "Resource tagging enables cost allocation across tenants, projects, and cost centers. Essential for multi-tenant billing and chargeback.",
+          "helpfulResource": {
+            "displayText": "Mandatory tags: Tenant, CostCenter, Environment, Project. Enable as Cost Allocation Tags in AWS Billing for Cost Explorer visibility.",
+            "url": "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-alloc-tags.html"
+          },
+          "choices": [
+            {
+              "id": "cost_01_no",
+              "title": "No tagging strategy or inconsistent tags",
+              "helpfulResource": {
+                "displayText": "Without tags, costs cannot be attributed to tenants or projects. Essential for government cost accounting.",
+                "url": "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-alloc-tags.html"
+              },
+              "improvementPlan": {
+                "displayText": "Define mandatory tag schema (Tenant, CostCenter, Environment, Project, Owner). Implement Terraform default_tags. Enable Cost Allocation Tags in Billing console. Create tag compliance audit script. Enforce tags with AWS Organizations tag policies."
+              }
+            },
+            {
+              "id": "cost_01_partial",
+              "title": "Tags defined but not enforced or not in Cost Explorer",
+              "helpfulResource": {
+                "displayText": "Tags without enforcement lead to incomplete cost data. Activate tags in Billing and enforce creation.",
+                "url": "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-alloc-tags.html"
+              },
+              "improvementPlan": {
+                "displayText": "Activate tags as Cost Allocation Tags (24-hour delay). Deploy AWS Config rules for tag compliance. Run weekly tag audit. Auto-remediate untagged resources. Create per-tenant cost reports. Implement tag policies in Organizations."
+              }
+            },
+            {
+              "id": "cost_01_yes",
+              "title": "Comprehensive tagging with enforcement and cost allocation",
+              "helpfulResource": {
+                "displayText": "Full tagging strategy enables accurate cost attribution. Use for tenant billing and optimization analysis.",
+                "url": "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-alloc-tags.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "cost_01_no",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "cost_01_partial",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "cost_01_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "cost_02",
+          "title": "How do you optimize Amazon Connect telephony costs?",
+          "description": "Telephony is the largest cost driver in contact centers. AI self-service reduces agent time. Optimize IVR flows to reduce unnecessary transfers.",
+          "helpfulResource": {
+            "displayText": "Connect charges per-minute for telephony (~$0.018/min inbound, ~$0.022/min outbound). AI self-service can reduce costs 50%+. Monitor containment rate.",
+            "url": "https://aws.amazon.com/connect/pricing/"
+          },
+          "choices": [
+            {
+              "id": "cost_02_no",
+              "title": "No telephony cost analysis or optimization",
+              "helpfulResource": {
+                "displayText": "Telephony costs can be significant. Without analysis, optimization opportunities are missed.",
+                "url": "https://aws.amazon.com/connect/pricing/"
+              },
+              "improvementPlan": {
+                "displayText": "Analyze call duration and transfer patterns. Implement AI self-service for common queries. Optimize IVR to reduce time-to-resolution. Monitor containment rate (% handled by AI without agent). Set target: 40%+ AI containment. Use after-hours messaging to reduce wait time charges."
+              }
+            },
+            {
+              "id": "cost_02_partial",
+              "title": "Some AI self-service but not optimized",
+              "helpfulResource": {
+                "displayText": "AI implementation is a good start. Optimize prompts and flows to increase containment rate.",
+                "url": "https://aws.amazon.com/connect/pricing/"
+              },
+              "improvementPlan": {
+                "displayText": "Analyze AI containment failures - why are callers transferring? Improve Lex intents for common failures. Optimize Bedrock prompts for accuracy. A/B test different approaches. Target 60%+ containment. Monitor average handle time trend."
+              }
+            },
+            {
+              "id": "cost_02_yes",
+              "title": "Optimized telephony with high AI containment rate",
+              "helpfulResource": {
+                "displayText": "High containment reduces costs while improving citizen experience. Continue monitoring for optimization opportunities.",
+                "url": "https://aws.amazon.com/connect/pricing/"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "cost_02_no",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "cost_02_partial",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "cost_02_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "cost_03",
+          "title": "How do you manage compute costs?",
+          "description": "Lambda, Bedrock, and other compute costs can grow with usage. Right-sizing, reserved capacity, and architectural choices affect costs.",
+          "helpfulResource": {
+            "displayText": "Lambda charges per-millisecond of execution. Bedrock charges per-token. Provisioned concurrency adds base cost. Balance performance and cost.",
+            "url": "https://aws.amazon.com/lambda/pricing/"
+          },
+          "choices": [
+            {
+              "id": "cost_03_no",
+              "title": "No compute cost monitoring or optimization",
+              "helpfulResource": {
+                "displayText": "Compute costs can surprise if not monitored. AI token costs especially can scale unexpectedly.",
+                "url": "https://aws.amazon.com/lambda/pricing/"
+              },
+              "improvementPlan": {
+                "displayText": "Add compute cost dashboard. Monitor Lambda invocations, duration, and memory. Track Bedrock token usage. Right-size Lambda memory using Power Tuning. Optimize Bedrock prompts to reduce tokens. Consider Savings Plans for predictable workloads."
+              }
+            },
+            {
+              "id": "cost_03_partial",
+              "title": "Monitoring exists but no active optimization",
+              "helpfulResource": {
+                "displayText": "Monitoring without action doesn't reduce costs. Use data to identify and implement optimizations.",
+                "url": "https://aws.amazon.com/lambda/pricing/"
+              },
+              "improvementPlan": {
+                "displayText": "Analyze top cost contributors. Optimize Lambda code for faster execution. Reduce Bedrock prompt sizes. Consider Claude 3 Haiku for simple tasks. Evaluate provisioned concurrency cost vs cold start impact. Set budget alerts."
+              }
+            },
+            {
+              "id": "cost_03_yes",
+              "title": "Active compute cost management with optimization",
+              "helpfulResource": {
+                "displayText": "Optimized compute costs while maintaining performance. Continue monitoring for changes in usage patterns.",
+                "url": "https://aws.amazon.com/lambda/pricing/"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "cost_03_no",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "cost_03_partial",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "cost_03_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "cost_04",
+          "title": "How do you implement budget controls?",
+          "description": "AWS Budgets and alerts prevent unexpected costs. Essential for government fixed budgets and contract compliance.",
+          "helpfulResource": {
+            "displayText": "AWS Budgets can alert at thresholds and optionally stop resources. Cost anomaly detection catches unexpected spikes.",
+            "url": "https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html"
+          },
+          "choices": [
+            {
+              "id": "cost_04_no",
+              "title": "No budgets or cost alerts configured",
+              "helpfulResource": {
+                "displayText": "Without budget controls, costs can exceed allocations without warning. Critical for government fixed budgets.",
+                "url": "https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html"
+              },
+              "improvementPlan": {
+                "displayText": "Create AWS Budget for total spend. Add per-tenant budgets using tag filters. Configure alerts at 50%, 80%, 100% thresholds. Enable Cost Anomaly Detection. Create escalation chain for budget alerts. Consider budget actions to prevent overage."
+              }
+            },
+            {
+              "id": "cost_04_partial",
+              "title": "Basic budget alerts but no per-tenant tracking",
+              "helpfulResource": {
+                "displayText": "Account-level budgets may not catch tenant-specific issues. Per-tenant visibility essential for multi-tenant.",
+                "url": "https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html"
+              },
+              "improvementPlan": {
+                "displayText": "Create budgets filtered by Tenant tag. Add service-level budgets for high-cost services (Connect, Bedrock). Enable Cost Anomaly Detection. Create monthly cost reports per tenant. Implement showback/chargeback process."
+              }
+            },
+            {
+              "id": "cost_04_yes",
+              "title": "Comprehensive budget controls with per-tenant tracking",
+              "helpfulResource": {
+                "displayText": "Full budget controls ensure fiscal responsibility. Review and adjust budgets quarterly.",
+                "url": "https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "cost_04_no",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "cost_04_partial",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "cost_04_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "operations",
+      "name": "Operational Excellence",
+      "questions": [
+        {
+          "id": "ops_01",
+          "title": "How do you implement infrastructure as code?",
+          "description": "All infrastructure should be defined in code (Terraform, CloudFormation) for repeatability, version control, and compliance documentation.",
+          "helpfulResource": {
+            "displayText": "Infrastructure as Code enables repeatable deployments, change tracking, and disaster recovery. FedRAMP CM control family requires configuration management.",
+            "url": "https://docs.aws.amazon.com/whitepapers/latest/introduction-devops-aws/infrastructure-as-code.html"
+          },
+          "choices": [
+            {
+              "id": "ops_01_no",
+              "title": "Manual console deployments without IaC",
+              "helpfulResource": {
+                "displayText": "Manual deployments cannot be repeated reliably, audited, or recovered in DR. Essential for government compliance.",
+                "url": "https://docs.aws.amazon.com/whitepapers/latest/introduction-devops-aws/infrastructure-as-code.html"
+              },
+              "improvementPlan": {
+                "displayText": "Adopt Terraform or CloudFormation for all resources. Export existing resources using terraformer or Former2. Store IaC in git repository. Implement PR-based change management. Never make manual changes to production."
+              }
+            },
+            {
+              "id": "ops_01_partial",
+              "title": "Partial IaC coverage with some manual configurations",
+              "helpfulResource": {
+                "displayText": "Partial IaC leaves gaps in repeatability and compliance. All production resources should be in code.",
+                "url": "https://docs.aws.amazon.com/whitepapers/latest/introduction-devops-aws/infrastructure-as-code.html"
+              },
+              "improvementPlan": {
+                "displayText": "Audit resources for IaC coverage. Import remaining resources to Terraform state. Document any exceptions with justification. Implement drift detection. Create policy requiring IaC for all new resources."
+              }
+            },
+            {
+              "id": "ops_01_yes",
+              "title": "Full IaC coverage with version control and CI/CD",
+              "helpfulResource": {
+                "displayText": "Complete IaC implementation meets CM control requirements. Document IaC processes in SSP.",
+                "url": "https://docs.aws.amazon.com/whitepapers/latest/introduction-devops-aws/infrastructure-as-code.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "ops_01_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "ops_01_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "ops_01_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "ops_02",
+          "title": "How do you implement monitoring and observability?",
+          "description": "Comprehensive monitoring enables proactive issue detection and performance management. Dashboards, alarms, and logging provide operational visibility.",
+          "helpfulResource": {
+            "displayText": "Key metrics: concurrent calls, agent availability, queue wait time, Lambda errors, AI response latency. Real-time dashboards enable quick issue resolution.",
+            "url": "https://docs.aws.amazon.com/connect/latest/adminguide/monitoring-cloudwatch.html"
+          },
+          "choices": [
+            {
+              "id": "ops_02_no",
+              "title": "No dashboards, alarms, or centralized logging",
+              "helpfulResource": {
+                "displayText": "Without monitoring, issues are discovered by users rather than operations. Reactive mode increases downtime.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/monitoring-cloudwatch.html"
+              },
+              "improvementPlan": {
+                "displayText": "Create CloudWatch dashboard with: concurrent calls, queue depth, agent availability, Lambda errors, Lex success rate, Bedrock latency. Set alarms for: high queue wait, Lambda errors > 1%, agent availability < 80%. Enable centralized logging. Create on-call rotation."
+              }
+            },
+            {
+              "id": "ops_02_partial",
+              "title": "Basic monitoring but incomplete coverage",
+              "helpfulResource": {
+                "displayText": "Gaps in monitoring leave blind spots. Ensure all critical paths are monitored with appropriate alarms.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/monitoring-cloudwatch.html"
+              },
+              "improvementPlan": {
+                "displayText": "Audit monitoring coverage. Add missing metrics (AI latency, quota usage, DynamoDB throttling). Create composite alarms for complex failure scenarios. Implement log-based metrics for custom events. Add Contact Lens analytics dashboard."
+              }
+            },
+            {
+              "id": "ops_02_yes",
+              "title": "Comprehensive monitoring with proactive alerting",
+              "helpfulResource": {
+                "displayText": "Full observability enables proactive operations. Review alarm thresholds quarterly based on actual patterns.",
+                "url": "https://docs.aws.amazon.com/connect/latest/adminguide/monitoring-cloudwatch.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "ops_02_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "ops_02_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "ops_02_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "ops_03",
+          "title": "How do you manage operational runbooks?",
+          "description": "Documented runbooks ensure consistent incident response and operational procedures. Essential for FedRAMP IR and CP control families.",
+          "helpfulResource": {
+            "displayText": "Runbooks document: incident response, DR failover, common troubleshooting, quota increase procedures. Critical for knowledge transfer and compliance.",
+            "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/automation-documents.html"
+          },
+          "choices": [
+            {
+              "id": "ops_03_no",
+              "title": "No runbooks or tribal knowledge only",
+              "helpfulResource": {
+                "displayText": "Without runbooks, incident response depends on specific people being available. Creates risk and extends resolution time.",
+                "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/automation-documents.html"
+              },
+              "improvementPlan": {
+                "displayText": "Create runbooks for: common incidents (high queue wait, Lambda errors), DR failover steps, quota increase process, agent provisioning, tenant onboarding. Store in accessible location. Train team on usage. Review after each incident."
+              }
+            },
+            {
+              "id": "ops_03_partial",
+              "title": "Some runbooks but incomplete or outdated",
+              "helpfulResource": {
+                "displayText": "Incomplete runbooks leave gaps. Outdated runbooks cause errors during incidents. Regular review essential.",
+                "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/automation-documents.html"
+              },
+              "improvementPlan": {
+                "displayText": "Audit existing runbooks for completeness. Update with post-incident learnings. Add missing procedures. Schedule quarterly runbook reviews. Consider SSM Automation for executable runbooks. Test runbooks during DR drills."
+              }
+            },
+            {
+              "id": "ops_03_yes",
+              "title": "Comprehensive runbooks with regular updates and testing",
+              "helpfulResource": {
+                "displayText": "Well-maintained runbooks enable consistent operations. Include runbooks in FedRAMP documentation.",
+                "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/automation-documents.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "ops_03_no",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "ops_03_partial",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "ops_03_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "ops_04",
+          "title": "How do you manage tenant isolation and configuration?",
+          "description": "Multi-tenant deployments require clear tenant boundaries, configuration management, and isolation verification.",
+          "helpfulResource": {
+            "displayText": "Tenant isolation includes: separate queues, security profiles, data partitioning, S3 prefixes, and monitoring. Misconfiguration can expose tenant data.",
+            "url": "https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/tenant-isolation.html"
+          },
+          "choices": [
+            {
+              "id": "ops_04_no",
+              "title": "No tenant isolation strategy or ad-hoc separation",
+              "helpfulResource": {
+                "displayText": "Without formal isolation, tenant data leakage is possible. Government agencies cannot share data inappropriately.",
+                "url": "https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/tenant-isolation.html"
+              },
+              "improvementPlan": {
+                "displayText": "Document tenant isolation architecture. Use Connect security profiles per tenant. Partition DynamoDB by tenant_id. Use S3 prefixes per tenant with bucket policies. Tag all resources with Tenant. Test isolation through security reviews. Consider separate Connect instances for high-security tenants."
+              }
+            },
+            {
+              "id": "ops_04_partial",
+              "title": "Isolation defined but not verified or automated",
+              "helpfulResource": {
+                "displayText": "Unverified isolation may have gaps. Regular testing and automation ensure consistent isolation.",
+                "url": "https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/tenant-isolation.html"
+              },
+              "improvementPlan": {
+                "displayText": "Create tenant isolation test suite. Verify queries always filter by tenant_id. Audit S3 bucket policies. Review Connect security profiles for cross-tenant access. Automate tenant onboarding with Terraform. Add isolation checks to CI/CD pipeline."
+              }
+            },
+            {
+              "id": "ops_04_yes",
+              "title": "Verified tenant isolation with automated configuration",
+              "helpfulResource": {
+                "displayText": "Robust tenant isolation with verification ensures data protection. Document isolation architecture for compliance.",
+                "url": "https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/tenant-isolation.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "ops_04_no",
+              "risk": "HIGH_RISK"
+            },
+            {
+              "condition": "ops_04_partial",
+              "risk": "MEDIUM_RISK"
+            },
+            {
+              "condition": "ops_04_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sustainability",
+      "name": "Sustainability",
+      "questions": [
+        {
+          "id": "sus_01",
+          "title": "How do you optimize resource utilization?",
+          "description": "Efficient resource utilization reduces environmental impact and cost. Serverless services automatically scale to zero when not in use.",
+          "helpfulResource": {
+            "displayText": "Serverless architecture (Lambda, DynamoDB on-demand) scales with demand. Avoid over-provisioned always-on resources. Right-size based on actual usage.",
+            "url": "https://docs.aws.amazon.com/wellarchitected/latest/sustainability-pillar/sus_sus_user_behavior.html"
+          },
+          "choices": [
+            {
+              "id": "sus_01_no",
+              "title": "Overprovisioned resources or no utilization analysis",
+              "helpfulResource": {
+                "displayText": "Over-provisioned resources waste energy and cost. Serverless and right-sizing improve efficiency.",
+                "url": "https://docs.aws.amazon.com/wellarchitected/latest/sustainability-pillar/sus_sus_user_behavior.html"
+              },
+              "improvementPlan": {
+                "displayText": "Review resource utilization in Cost Explorer. Convert provisioned DynamoDB to on-demand. Right-size Lambda memory. Remove unused resources (old test instances, orphaned EBS). Enable auto-scaling where applicable. Use serverless services when possible."
+              }
+            },
+            {
+              "id": "sus_01_partial",
+              "title": "Some optimization but not systematic",
+              "helpfulResource": {
+                "displayText": "Ad-hoc optimization misses opportunities. Systematic review ensures ongoing efficiency.",
+                "url": "https://docs.aws.amazon.com/wellarchitected/latest/sustainability-pillar/sus_sus_user_behavior.html"
+              },
+              "improvementPlan": {
+                "displayText": "Schedule quarterly utilization reviews. Use AWS Compute Optimizer recommendations. Review CloudWatch for idle resources. Document optimization decisions. Consider sustainability in architecture decisions."
+              }
+            },
+            {
+              "id": "sus_01_yes",
+              "title": "Optimized serverless architecture with regular utilization review",
+              "helpfulResource": {
+                "displayText": "Efficient resource use aligns with sustainability goals. Continue monitoring as usage patterns change.",
+                "url": "https://docs.aws.amazon.com/wellarchitected/latest/sustainability-pillar/sus_sus_user_behavior.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "sus_01_no",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "sus_01_partial",
+              "risk": "NO_RISK"
+            },
+            {
+              "condition": "sus_01_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        },
+        {
+          "id": "sus_02",
+          "title": "How do you manage data lifecycle?",
+          "description": "Data lifecycle management reduces storage footprint over time. Implement retention policies, tiered storage, and automated cleanup.",
+          "helpfulResource": {
+            "displayText": "S3 lifecycle policies move old data to cheaper storage tiers. DynamoDB TTL automatically deletes expired items. Define retention based on compliance requirements.",
+            "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html"
+          },
+          "choices": [
+            {
+              "id": "sus_02_no",
+              "title": "No data lifecycle or indefinite retention",
+              "helpfulResource": {
+                "displayText": "Indefinite data retention increases storage costs and environmental impact unnecessarily.",
+                "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html"
+              },
+              "improvementPlan": {
+                "displayText": "Define data retention requirements (typically 1-7 years for government). Configure S3 lifecycle policies to move to Glacier after 90 days. Enable DynamoDB TTL for temporary data. Set CloudWatch log retention (recommend 1 year). Configure Connect recording retention."
+              }
+            },
+            {
+              "id": "sus_02_partial",
+              "title": "Some lifecycle policies but incomplete coverage",
+              "helpfulResource": {
+                "displayText": "Partial coverage leaves storage growing. Audit all data stores for lifecycle policies.",
+                "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html"
+              },
+              "improvementPlan": {
+                "displayText": "Audit all S3 buckets for lifecycle policies. Review DynamoDB tables for TTL applicability. Check CloudWatch log groups for retention settings. Document retention policy exceptions. Review compliance requirements for each data type."
+              }
+            },
+            {
+              "id": "sus_02_yes",
+              "title": "Comprehensive lifecycle management with compliance-aligned retention",
+              "helpfulResource": {
+                "displayText": "Proper lifecycle management balances compliance and efficiency. Document retention policies for auditors.",
+                "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html"
+              }
+            }
+          ],
+          "riskRules": [
+            {
+              "condition": "sus_02_no",
+              "risk": "LOW_RISK"
+            },
+            {
+              "condition": "sus_02_partial",
+              "risk": "NO_RISK"
+            },
+            {
+              "condition": "sus_02_yes",
+              "risk": "NO_RISK"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

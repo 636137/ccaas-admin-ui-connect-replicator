@@ -1,0 +1,301 @@
+{
+  "_fileDescription": {
+    "WHAT": "Amazon Connect Native AI Agent configuration schema",
+    "WHY": "Alternative to Bedrock Agent - simpler architecture with AI built directly into Connect",
+    "HOW": "Configure in Amazon Connect console under AI Agents, or use as reference for Connect APIs",
+    "VS_BEDROCK": "This approach has fewer moving parts (no Lex bot needed) but less flexibility for multi-channel reuse. See AGENT_OPTIONS_COMPARISON.md."
+  },
+  
+  "$schema": "https://docs.aws.amazon.com/connect/latest/adminguide/ai-agent-schema",
+  "agentName": "CensusEnumeratorAgent",
+  "description": "Native Amazon Connect AI Agent for conducting Census Enumerator surveys via voice and chat",
+  "version": "1.0.0",
+  
+  "connectConfiguration": {
+    "_docs": "Core Connect settings - REPLACE placeholder values with your actual Connect instance details",
+    "instanceId": "${CONNECT_INSTANCE_ID}",
+    "agentType": "AI_AGENT",
+    "channels": ["VOICE", "CHAT"],
+    "routingProfile": "Census-Enumerator-Routing",
+    "securityProfile": "Census-Agent-Security"
+  },
+
+  "aiAgentSettings": {
+    "_docs": "AI model and conversation behavior settings",
+    "modelConfiguration": {
+      "provider": "BEDROCK",
+      "modelId": "anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "inferenceConfiguration": {
+        "temperature": 0.7,
+        "topP": 0.9,
+        "maxTokens": 2048,
+        "stopSequences": []
+      }
+    },
+    "conversationSettings": {
+      "idleTimeoutSeconds": 300,
+      "maxTurns": 100,
+      "enableConversationMemory": true,
+      "memoryWindowTurns": 20
+    },
+    "voiceSettings": {
+      "_docs": "Ruth generative voice for natural-sounding speech",
+      "voiceId": "Ruth",
+      "engine": "generative",
+      "languageCode": "en-US",
+      "speakingRate": "medium"
+    }
+  },
+
+  "systemPrompt": {
+    "_docs": "Defines WHO the AI is and HOW it should behave - equivalent to agent-prompt.md content",
+    "role": "You are a friendly and professional Census Enumerator AI assistant working on behalf of the U.S. Census Bureau. Your purpose is to conduct census surveys with constituents to collect accurate household information for the decennial census count.",
+    "instructions": [
+      "Always begin by greeting the constituent and identifying yourself as a Census Bureau representative",
+      "Verify the address on file before proceeding with the survey",
+      "Confirm you are speaking with an adult resident (18+) of the household",
+      "Collect the total number of people living at the address as of April 1st",
+      "For each person, collect: name, relationship to householder, sex, date of birth, Hispanic origin, and race",
+      "Collect housing tenure information (owned/rented)",
+      "Always emphasize that responses are confidential and protected by Title 13",
+      "Be patient, clear, and willing to repeat or clarify questions",
+      "Handle refusals gracefully and offer callback options",
+      "Never ask for SSN, immigration status, or financial information"
+    ],
+    "persona": "Professional yet warm, patient, culturally sensitive, and trustworthy"
+  },
+
+  "selfServiceActions": [
+    {
+      "_docs": "VERIFY ADDRESS: Called when constituent confirms their address. REPLACE LAMBDA_ARN with your function ARN.",
+      "actionId": "verify-address",
+      "name": "Verify Address",
+      "description": "Verify the constituent's address before starting the survey",
+      "type": "LAMBDA",
+      "lambdaArn": "${LAMBDA_ARN}",
+      "inputParameters": [
+        { "name": "streetAddress", "type": "STRING", "required": true },
+        { "name": "city", "type": "STRING", "required": true },
+        { "name": "state", "type": "STRING", "required": true },
+        { "name": "zipCode", "type": "STRING", "required": true }
+      ],
+      "outputParameters": [
+        { "name": "isVerified", "type": "BOOLEAN" },
+        { "name": "caseId", "type": "STRING" }
+      ]
+    },
+    {
+      "_docs": "SAVE HOUSEHOLD COUNT: Records total people in household",
+      "actionId": "save-household-count",
+      "name": "Save Household Count",
+      "description": "Record the total number of people in the household",
+      "type": "LAMBDA",
+      "lambdaArn": "${LAMBDA_ARN}",
+      "inputParameters": [
+        { "name": "caseId", "type": "STRING", "required": true },
+        { "name": "householdCount", "type": "INTEGER", "required": true }
+      ],
+      "outputParameters": [
+        { "name": "success", "type": "BOOLEAN" }
+      ]
+    },
+    {
+      "_docs": "SAVE PERSON INFO: Called once for EACH person in household with all demographic fields",
+      "actionId": "save-person-info",
+      "name": "Save Person Information",
+      "description": "Save demographic information for a household member",
+      "type": "LAMBDA",
+      "lambdaArn": "${LAMBDA_ARN}",
+      "inputParameters": [
+        { "name": "caseId", "type": "STRING", "required": true },
+        { "name": "personNumber", "type": "INTEGER", "required": true },
+        { "name": "firstName", "type": "STRING", "required": true },
+        { "name": "lastName", "type": "STRING", "required": true },
+        { "name": "relationship", "type": "STRING", "required": true },
+        { "name": "sex", "type": "STRING", "required": true },
+        { "name": "dateOfBirth", "type": "STRING", "required": true },
+        { "name": "age", "type": "INTEGER", "required": true },
+        { "name": "isHispanicLatino", "type": "BOOLEAN", "required": true },
+        { "name": "hispanicOrigin", "type": "STRING", "required": false },
+        { "name": "race", "type": "STRING_LIST", "required": true },
+        { "name": "raceDetail", "type": "STRING", "required": false }
+      ],
+      "outputParameters": [
+        { "name": "success", "type": "BOOLEAN" },
+        { "name": "personId", "type": "STRING" }
+      ]
+    },
+    {
+      "actionId": "save-housing-info",
+      "name": "Save Housing Information",
+      "description": "Record housing tenure information",
+      "type": "LAMBDA",
+      "lambdaArn": "${LAMBDA_ARN}",
+      "inputParameters": [
+        { "name": "caseId", "type": "STRING", "required": true },
+        { "name": "housingTenure", "type": "STRING", "required": true },
+        { "name": "contactPhone", "type": "STRING", "required": false }
+      ],
+      "outputParameters": [
+        { "name": "success", "type": "BOOLEAN" }
+      ]
+    },
+    {
+      "actionId": "complete-survey",
+      "name": "Complete Survey",
+      "description": "Finalize and submit the completed census survey",
+      "type": "LAMBDA",
+      "lambdaArn": "${LAMBDA_ARN}",
+      "inputParameters": [
+        { "name": "caseId", "type": "STRING", "required": true },
+        { "name": "status", "type": "STRING", "required": true }
+      ],
+      "outputParameters": [
+        { "name": "success", "type": "BOOLEAN" },
+        { "name": "confirmationNumber", "type": "STRING" }
+      ]
+    },
+    {
+      "actionId": "schedule-callback",
+      "name": "Schedule Callback",
+      "description": "Schedule a callback for incomplete surveys",
+      "type": "LAMBDA",
+      "lambdaArn": "${LAMBDA_ARN}",
+      "inputParameters": [
+        { "name": "caseId", "type": "STRING", "required": true },
+        { "name": "phoneNumber", "type": "STRING", "required": true },
+        { "name": "preferredDate", "type": "STRING", "required": true },
+        { "name": "preferredTime", "type": "STRING", "required": true },
+        { "name": "preferredLanguage", "type": "STRING", "required": false }
+      ],
+      "outputParameters": [
+        { "name": "success", "type": "BOOLEAN" },
+        { "name": "callbackId", "type": "STRING" }
+      ]
+    }
+  ],
+
+  "escalationSettings": {
+    "enableEscalation": true,
+    "escalationTriggers": [
+      {
+        "triggerId": "customer-request",
+        "condition": "Customer explicitly requests to speak with a human",
+        "action": "TRANSFER_TO_QUEUE",
+        "queueName": "Census-Live-Agents"
+      },
+      {
+        "triggerId": "repeated-failures",
+        "condition": "Three consecutive misunderstandings or failures",
+        "action": "TRANSFER_TO_QUEUE",
+        "queueName": "Census-Live-Agents"
+      },
+      {
+        "triggerId": "complex-situation",
+        "condition": "Complex living situation requiring human judgment",
+        "action": "TRANSFER_TO_QUEUE",
+        "queueName": "Census-Specialists"
+      },
+      {
+        "triggerId": "complaint",
+        "condition": "Customer expresses complaint or frustration",
+        "action": "TRANSFER_TO_QUEUE",
+        "queueName": "Census-Supervisors"
+      }
+    ],
+    "escalationMessage": "I understand you'd like to speak with a census representative. Let me transfer you now. Please hold for just a moment."
+  },
+
+  "guardrails": {
+    "enableGuardrails": true,
+    "guardrailId": "${BEDROCK_GUARDRAIL_ID}",
+    "guardrailVersion": "1",
+    "blockedTopics": [
+      {
+        "name": "Immigration Status",
+        "description": "Questions about immigration, citizenship, visa, or legal residency status",
+        "action": "BLOCK_AND_REDIRECT",
+        "redirectMessage": "I'm not able to ask about immigration or citizenship status. The census collects demographic information only. Let me continue with the next question."
+      },
+      {
+        "name": "Financial Information",
+        "description": "Questions about income, bank accounts, credit, or financial status",
+        "action": "BLOCK_AND_REDIRECT",
+        "redirectMessage": "The census does not collect financial information. Let me continue with the survey questions."
+      },
+      {
+        "name": "Political Views",
+        "description": "Questions about political opinions, voting, or party affiliation",
+        "action": "BLOCK_AND_REDIRECT",
+        "redirectMessage": "I'm not able to discuss political topics. Let me help you complete your census response."
+      }
+    ],
+    "blockedPII": [
+      "SOCIAL_SECURITY_NUMBER",
+      "CREDIT_CARD_NUMBER",
+      "BANK_ACCOUNT_NUMBER",
+      "PASSWORD",
+      "PIN"
+    ],
+    "contentFilters": {
+      "hateContent": "BLOCK",
+      "violenceContent": "BLOCK",
+      "sexualContent": "BLOCK",
+      "insultContent": "WARN"
+    }
+  },
+
+  "contactAttributes": {
+    "systemAttributes": [
+      { "name": "Channel", "description": "Voice or Chat" },
+      { "name": "CustomerEndpoint", "description": "Phone number or chat endpoint" },
+      { "name": "InitiationMethod", "description": "Inbound or Outbound" }
+    ],
+    "customAttributes": [
+      { "name": "caseId", "type": "STRING", "description": "Census case identifier" },
+      { "name": "addressId", "type": "STRING", "description": "Address record identifier" },
+      { "name": "householdCount", "type": "INTEGER", "description": "Number of people in household" },
+      { "name": "currentPersonIndex", "type": "INTEGER", "description": "Current person being enumerated" },
+      { "name": "surveyStatus", "type": "STRING", "description": "Survey completion status" },
+      { "name": "confirmationNumber", "type": "STRING", "description": "Survey confirmation number" },
+      { "name": "preferredLanguage", "type": "STRING", "description": "Constituent's preferred language" }
+    ]
+  },
+
+  "analyticsSettings": {
+    "enableContactLens": true,
+    "contactLensConfiguration": {
+      "enableSentimentAnalysis": true,
+      "enableThemeDetection": true,
+      "enableCategorization": true,
+      "categories": [
+        "Survey Completed",
+        "Survey Refused",
+        "Callback Scheduled",
+        "Privacy Concern",
+        "Language Barrier",
+        "Escalation Required"
+      ]
+    },
+    "customMetrics": [
+      { "name": "SurveyCompletionRate", "type": "PERCENTAGE" },
+      { "name": "AveragePersonsPerHousehold", "type": "AVERAGE" },
+      { "name": "EscalationRate", "type": "PERCENTAGE" },
+      { "name": "CallbackRate", "type": "PERCENTAGE" }
+    ]
+  },
+
+  "complianceSettings": {
+    "dataRetentionDays": 2628,
+    "enableEncryption": true,
+    "encryptionKeyArn": "${KMS_KEY_ARN}",
+    "auditLogging": true,
+    "complianceFrameworks": ["FISMA", "FedRAMP"],
+    "title13Protection": {
+      "enabled": true,
+      "description": "All responses protected under Title 13, U.S. Code",
+      "dataUsageRestriction": "STATISTICAL_PURPOSES_ONLY",
+      "sharingRestrictions": ["NO_LAW_ENFORCEMENT", "NO_IMMIGRATION", "NO_OTHER_AGENCIES"]
+    }
+  }
+}
