@@ -695,7 +695,13 @@ This tool generates infrastructure code - security is critical:
 
 ## 📝 License
 
-MIT License - See LICENSE file for details
+**Maximus Proprietary**
+
+This software is proprietary to Maximus Federal Services, LLC. Unauthorized access, use, or distribution is prohibited.
+
+**No License is Granted.** This software is for authorized Maximus personnel only. Not for public use.
+
+© 2026 Maximus Federal Services, LLC. All rights reserved.
 
 ---
 

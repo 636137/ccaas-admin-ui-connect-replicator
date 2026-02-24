@@ -1,6 +1,7 @@
 {
   "name": "@ccaas/ui",
   "version": "1.0.0",
+  "license": "Proprietary",
   "type": "module",
   "scripts": {
     "dev": "vite",

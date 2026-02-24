@@ -1,6 +1,7 @@
 {
   "name": "@ccaas/api",
   "version": "1.0.0",
+  "license": "Proprietary",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
