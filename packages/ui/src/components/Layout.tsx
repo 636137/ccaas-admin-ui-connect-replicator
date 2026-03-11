@@ -6,7 +6,8 @@ import {
   Cpu, 
   Rocket,
   Settings,
-  Shield
+  Shield,
+  GitMerge
 } from 'lucide-react'
 
 interface LayoutProps {
@@ -18,6 +19,7 @@ const navigation = [
   { name: 'Configuration Wizard', href: '/wizard', icon: Wand2 },
   { name: 'AI Models', href: '/models', icon: Cpu },
   { name: 'Deployments', href: '/deployments', icon: Rocket },
+  { name: 'Connect Replicator', href: '/connect', icon: GitMerge },
 ]
 
 export function Layout({ children }: LayoutProps) {

@@ -7,7 +7,13 @@ import type {
   ValidationResult,
   PrerequisiteCheck,
   ApiError,
-} from '../types';
+  RegionsResponse,
+  ListInstancesResponse,
+  DescribeInstanceResponse,
+  SnapshotResponse,
+  ReplicateResponse,
+  ReplicationStatusResponse,
+} from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -139,7 +145,46 @@ export class ApiClient {
    * Get available Bedrock models
    */
   async getBedrockModels() {
-    return this.request('/api/config/models');
+    return this.request('/api/config/models')
+  }
+
+  async connectRegions(): Promise<RegionsResponse> {
+    return this.request('/api/connect/regions')
+  }
+
+  async connectListInstances(region: string): Promise<ListInstancesResponse> {
+    return this.request(`/api/connect/instances?region=${encodeURIComponent(region)}`)
+  }
+
+  async connectDescribeInstance(region: string, instanceId: string): Promise<DescribeInstanceResponse> {
+    return this.request(
+      `/api/connect/instance?region=${encodeURIComponent(region)}&instanceId=${encodeURIComponent(instanceId)}`,
+    )
+  }
+
+  async connectReplicationStatus(region: string, instanceId: string): Promise<ReplicationStatusResponse> {
+    return this.request(
+      `/api/connect/replication-status?region=${encodeURIComponent(region)}&instanceId=${encodeURIComponent(instanceId)}`,
+    )
+  }
+
+  async connectSnapshot(region: string, instanceId: string): Promise<SnapshotResponse> {
+    return this.request('/api/connect/snapshot', {
+      method: 'POST',
+      body: JSON.stringify({ region, instanceId }),
+    })
+  }
+
+  async connectReplicate(input: {
+    sourceRegion: string
+    targetRegion: string
+    instanceId: string
+    replicaAlias: string
+  }): Promise<ReplicateResponse> {
+    return this.request('/api/connect/replicate', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
   }
 }
 

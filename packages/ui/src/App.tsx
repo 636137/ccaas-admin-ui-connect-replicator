@@ -4,6 +4,7 @@ import { Dashboard } from './pages/Dashboard'
 import { ConfigWizard } from './pages/ConfigWizard'
 import { ModelsPage } from './pages/ModelsPage'
 import { DeploymentsPage } from './pages/DeploymentsPage'
+import { ConnectReplicatorPage } from './pages/ConnectReplicatorPage'
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/wizard/*" element={<ConfigWizard />} />
         <Route path="/models" element={<ModelsPage />} />
         <Route path="/deployments" element={<DeploymentsPage />} />
+        <Route path="/connect" element={<ConnectReplicatorPage />} />
       </Routes>
     </Layout>
   )

@@ -12,6 +12,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@aws-sdk/client-connect": "^3.700.0",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
     "cors": "^2.8.5",

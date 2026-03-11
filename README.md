@@ -177,6 +177,8 @@ User fills out Configuration Wizard
 
 - **🌍 Multi-Region Support** - Deploy to any AWS region including GovCloud
 
+- **🧬 Connect Replicator (Global Resiliency)** - Browse regions/instances and trigger `ReplicateInstance` via a guided UI at `/connect`
+
 - **✅ Real-Time Validation** - Prevents invalid configurations before download
 
 - **📊 Flexible Deployment Options**
@@ -510,6 +512,33 @@ ccaas-admin-ui/
 GET /api/health
 Response: { "status": "ok", "timestamp": "2026-02-24T..." }
 ```
+
+### Amazon Connect Replicator (Global Resiliency)
+These endpoints power the UI at: `GET /connect`
+
+```
+GET /api/connect/regions
+Response: { regions: [...], globalResiliencyTargets: { "us-east-1": ["us-west-2"], ... } }
+
+GET /api/connect/instances?region=us-east-1
+GET /api/connect/instance?region=us-east-1&instanceId=<uuid-or-arn>
+GET /api/connect/replication-status?region=us-west-2&instanceId=<uuid>
+
+POST /api/connect/snapshot
+Body: { "region": "us-east-1", "instanceId": "<uuid-or-arn>" }
+
+POST /api/connect/replicate
+Body: {
+  "sourceRegion": "us-east-1",
+  "targetRegion": "us-west-2",
+  "instanceId": "<uuid-or-arn>",
+  "replicaAlias": "my-replica-alias"
+}
+```
+
+Notes:
+- `ReplicateInstance` is access-gated by AWS and may return errors like "AWS account not allowlisted" until enabled.
+- Source instance must be `ACTIVE` and `SAML` identity-managed for Global Resiliency replication.
 
 ### Generate Deployment Package
 ```
