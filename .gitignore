@@ -21,3 +21,4 @@ id_dsa
 
 # Logs
 *.log
+node_modules/

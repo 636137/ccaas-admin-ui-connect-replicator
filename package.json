@@ -4,7 +4,9 @@
   "description": "Admin UI for Government CCaaS in a Box configuration",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "frontend/*",
+    "backend/*",
+    "infra/*"
   ],
   "scripts": {
     "install:all": "npm install && npm install -w packages/api archiver @types/archiver",
