@@ -1,3 +1,9 @@
+## Proprietary Notice
+
+This code is proprietary to **Maximus**. **No public license is granted**. See [`NOTICE`](./NOTICE).
+
+---
+
 # Government CCaaS Admin UI
 
 **An intuitive web-based configuration generator for deploying AI-powered government contact centers on AWS with one click.**
